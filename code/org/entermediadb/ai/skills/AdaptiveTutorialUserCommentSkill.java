@@ -12,8 +12,10 @@ import org.entermediadb.ai.llm.AutomationStep;
 import org.entermediadb.ai.llm.BasicLlmResponse;
 import org.entermediadb.ai.llm.LlmConnection;
 import org.entermediadb.ai.llm.LlmResponse;
+import org.entermediadb.asset.Asset;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
 import org.openedit.Data;
 import org.openedit.MultiValued;
 
@@ -41,7 +43,7 @@ public class AdaptiveTutorialUserCommentSkill extends AdaptiveTutorialBaseSkill
 		if (usermessage == null || usermessage.length() == 0)
 		{
 			// TestU app follow-ups carry the text as context_query only.
-			usermessage = (String) tutorMessageContext.getMessageAgentContext("query");
+			usermessage = (String) tutorMessageContext.getContextValue("query");
 		}
 		String userId = tutorMessageContext.getUserProfile().getUser().getId();
 
@@ -104,7 +106,17 @@ public class AdaptiveTutorialUserCommentSkill extends AdaptiveTutorialBaseSkill
 			// agentcontextvalues). The channel context keeps the last session
 			// answer around, so free chat from the tutor tab or a document was
 			// told "your last answer, option A, is wrong" (2026-09-04).
-			JSONObject request = tutorMessageContext.getUserMessage() == null ? null : tutorMessageContext.getUserMessage().getJSONValue("agentcontextvalues");
+			String requestStr = tutorMessageContext.getUserMessage() == null ? null : tutorMessageContext.getUserMessage().get("agentcontextvalues");
+			JSONObject request = null;
+			try
+			{
+				JSONParser parser = new JSONParser();
+				request = (JSONObject) parser.parse(requestStr);
+			}
+			catch (Exception e)
+			{
+				log.error("Failed to parse request values", e);
+			}
 			String selected = requestValue(tutorMessageContext, request, "selectedoption");
 			String confidence = requestValue(tutorMessageContext, request, "confidence");
 			String prompt = usermessage;
@@ -127,7 +139,7 @@ public class AdaptiveTutorialUserCommentSkill extends AdaptiveTutorialBaseSkill
 			if (question != null)
 			{
 				StringBuilder qb = new StringBuilder("Current question: ").append(question.get("question")).append("\n");
-				for (String key : new String[] { "option_a", "option_b", "option_c", "option_d", "option_e", "option_f" })
+				for (String key : new String[] {"option_a", "option_b", "option_c", "option_d", "option_e", "option_f"})
 				{
 					String v = question.get(key);
 					if (v != null && v.length() > 0)
@@ -146,7 +158,7 @@ public class AdaptiveTutorialUserCommentSkill extends AdaptiveTutorialBaseSkill
 			tutorMessageContext.putContextValue("learnerprompt", prompt);
 			LlmConnection thinking = getMediaArchive().getLlmConnection("thinking");
 			LlmResponse response = thinking.callStructure(tutorMessageContext, "chat_tutor_usercomment");
-			JSONObject structured = response.getMessageStructured();
+			JSONObject structured = response.getResponsePayload();
 			String message = structured == null ? null : (String) structured.get("message");
 			if (message == null)
 			{
@@ -168,29 +180,29 @@ public class AdaptiveTutorialUserCommentSkill extends AdaptiveTutorialBaseSkill
 	}
 
 	/**
-	 * A context value as this request sent it: from the triggering message's
-	 * own agentcontextvalues when it has them (TestU app), else from the
-	 * message context as before (eMe web chat, no per-request values).
+	 * A context value as this request sent it: from the triggering message's own agentcontextvalues
+	 * when it has them (TestU app), else from the message context as before (eMe web chat, no
+	 * per-request values).
 	 */
 	private String requestValue(TutorMessageContext inContext, JSONObject inRequest, String inKey)
 	{
 		if (inRequest == null)
 		{
-			return (String) inContext.getMessageAgentContext(inKey);
+			return (String) inContext.getContextValue(inKey);
 		}
 		Object value = inRequest.get(inKey);
 		return value == null ? null : value.toString();
 	}
 
 	/**
-	 * TestU local patch: the citation the app parses — a verbatim passage of
-	 * the cited page (`> …`, the sentence sharing most words with the question)
-	 * and `[Title, p. N]` — from the top RAG source (`parent_id` =
-	 * `entityasset_<id>`, `page_label` = pagenum), instead of asking the LLM to
-	 * write it. Empty when there is no usable source.
+	 * TestU local patch: the citation the app parses — a verbatim passage of the cited page (`> …`, the
+	 * sentence sharing most words with the question) and `[Title, p. N]` — from the top RAG source
+	 * (`parent_id` = `entityasset_<id>`, `page_label` = pagenum), instead of asking the LLM to write
+	 * it. Empty when there is no usable source.
 	 */
 	/**
 	 * Output (the app's splitCite grammar), primary source last:
+	 * 
 	 * <pre>
 	 * > verbatim passage of the primary source
 	 *
@@ -198,8 +210,9 @@ public class AdaptiveTutorialUserCommentSkill extends AdaptiveTutorialBaseSkill
 	 * [Primary title, p. 57]        or [Title, m:ss] for a transcribed video
 	 * [[hl x,y,w,h;x,y,w,h]]        page-relative boxes of the passage (PDF only)
 	 * </pre>
-	 * The embedding server's sources carry no chunk text (id, parent_id,
-	 * page_label, file_name, score), so the passage is picked locally.
+	 * 
+	 * The embedding server's sources carry no chunk text (id, parent_id, page_label, file_name, score),
+	 * so the passage is picked locally.
 	 */
 	protected String citeFromSources(JSONArray sources, String query, String answer)
 	{
@@ -276,9 +289,9 @@ public class AdaptiveTutorialUserCommentSkill extends AdaptiveTutorialBaseSkill
 	}
 
 	/**
-	 * The transcript line of a video document best matching the question
-	 * and answer (videotrack.captions of its primarymedia); null for PDFs and
-	 * untranscribed videos, which cite the page as before.
+	 * The transcript line of a video document best matching the question and answer
+	 * (videotrack.captions of its primarymedia); null for PDFs and untranscribed videos, which cite the
+	 * page as before.
 	 */
 	protected Map bestCaption(Data inDoc, String inQuery, String inAnswer)
 	{
@@ -311,13 +324,11 @@ public class AdaptiveTutorialUserCommentSkill extends AdaptiveTutorialBaseSkill
 	}
 
 	/**
-	 * ponytail: the sentence of inText (40–600 chars, markdown marks
-	 * stripped) scoring highest on 4+ letter words shared with the question
-	 * (2 each) plus three-word phrases shared with the answer (1 each) — the
-	 * answer reuses the wording of the chunk the RAG read, so phrase overlap
-	 * points at the body sentence rather than a footnote sharing keywords.
-	 * "" when nothing overlaps. Replace with the server's matched chunk once
-	 * /chat returns source text.
+	 * ponytail: the sentence of inText (40–600 chars, markdown marks stripped) scoring highest on 4+
+	 * letter words shared with the question (2 each) plus three-word phrases shared with the answer (1
+	 * each) — the answer reuses the wording of the chunk the RAG read, so phrase overlap points at the
+	 * body sentence rather than a footnote sharing keywords. "" when nothing overlaps. Replace with the
+	 * server's matched chunk once /chat returns source text.
 	 */
 	protected String bestSentence(String inText, String inQuery, String inAnswer)
 	{
@@ -414,13 +425,12 @@ public class AdaptiveTutorialUserCommentSkill extends AdaptiveTutorialBaseSkill
 	}
 
 	// ponytail: poppler on the PATH (or Homebrew's); an EME commandmap entry when it moves servers.
-	private static final String[] PDFTOTEXT = { "/opt/homebrew/bin/pdftotext", "/usr/bin/pdftotext", "/usr/local/bin/pdftotext" };
+	private static final String[] PDFTOTEXT = {"/opt/homebrew/bin/pdftotext", "/usr/bin/pdftotext", "/usr/local/bin/pdftotext"};
 
 	/**
-	 * Page-relative boxes (x,y,w,h in 0–1, one per text line, ';'-joined) of
-	 * inQuote on page inPage of inDoc's PDF, from `pdftotext -bbox-layout`;
-	 * "" when the quote is not found there (≥60 % of its words in order) or
-	 * pdftotext is unavailable. The app paints them over the rendered page.
+	 * Page-relative boxes (x,y,w,h in 0–1, one per text line, ';'-joined) of inQuote on page inPage of
+	 * inDoc's PDF, from `pdftotext -bbox-layout`; "" when the quote is not found there (≥60 % of its
+	 * words in order) or pdftotext is unavailable. The app paints them over the rendered page.
 	 */
 	protected String highlightRects(Data inDoc, String inPage, String inQuote)
 	{
@@ -461,7 +471,7 @@ public class AdaptiveTutorialUserCommentSkill extends AdaptiveTutorialBaseSkill
 			while (wm.find())
 			{
 				words.add(plain(wm.group(5)));
-				boxes.add(new double[] { Double.parseDouble(wm.group(1)), Double.parseDouble(wm.group(2)), Double.parseDouble(wm.group(3)), Double.parseDouble(wm.group(4)) });
+				boxes.add(new double[] {Double.parseDouble(wm.group(1)), Double.parseDouble(wm.group(2)), Double.parseDouble(wm.group(3)), Double.parseDouble(wm.group(4))});
 			}
 			java.util.List<String> quote = new java.util.ArrayList<String>();
 			for (String w : inQuote.split("\\s+"))
@@ -544,10 +554,9 @@ public class AdaptiveTutorialUserCommentSkill extends AdaptiveTutorialBaseSkill
 	}
 
 	/**
-	 * TestU local patch: keyword-matched pages of the reference documents
-	 * (entityasset records linked to the tutorial, split into entityassetpage
-	 * records with markdowncontent) as prompt text, each headed by the document
-	 * title and page so the tutor can cite it. Empty when nothing matches.
+	 * TestU local patch: keyword-matched pages of the reference documents (entityasset records linked
+	 * to the tutorial, split into entityassetpage records with markdowncontent) as prompt text, each
+	 * headed by the document title and page so the tutor can cite it. Empty when nothing matches.
 	 */
 	protected String findReferenceExcerpts(String tutorialid, String query)
 	{
@@ -593,10 +602,9 @@ public class AdaptiveTutorialUserCommentSkill extends AdaptiveTutorialBaseSkill
 	}
 
 	/**
-	 * TestU local patch: what `tutoranswer` knows about this learner — their
-	 * past attempts on this question (most recent first), their tally in this
-	 * tutorial broken down by section (topic / subtopic), and their overall
-	 * tally — as prompt text. Empty when there is nothing recorded.
+	 * TestU local patch: what `tutoranswer` knows about this learner — their past attempts on this
+	 * question (most recent first), their tally in this tutorial broken down by section (topic /
+	 * subtopic), and their overall tally — as prompt text. Empty when there is nothing recorded.
 	 */
 	protected String answerHistory(String userId, String questionid, String tutorialid, String sectionid)
 	{
@@ -621,7 +629,13 @@ public class AdaptiveTutorialUserCommentSkill extends AdaptiveTutorialBaseSkill
 					}
 					items.append(a.get("selectedoption")).append(" (").append(a.get("answerconfidence")).append(", ").append(ok ? "correct" : "incorrect").append(")");
 				}
-				out.append("Past answers of the learner on this question, most recent first: ").append(items).append(". Total ").append(past.size()).append(" attempts, ").append(correct).append(" correct.\n");
+				out.append("Past answers of the learner on this question, most recent first: ")
+					.append(items)
+					.append(". Total ")
+					.append(past.size())
+					.append(" attempts, ")
+					.append(correct)
+					.append(" correct.\n");
 			}
 		}
 		if (tutorialid != null && tutorialid.length() > 0)

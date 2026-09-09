@@ -2,7 +2,6 @@ package org.entermediadb.ai.assistant;
 
 import java.util.Collection;
 import java.util.Iterator;
-import org.json.simple.JSONObject;
 import java.util.Map;
 
 import org.apache.commons.logging.Log;
@@ -244,12 +243,6 @@ public class AgentModule extends BaseMediaModule
 		}
 
 		Collection<String> params = inReq.getParameterMap().keySet();
-		// TestU local patch: the request's context_* values also ride on the
-		// system message that triggers the function. loadChatContext rebuilds
-		// the channel context from the newest message's agentcontextvalues, so
-		// without this the tutorial cursor stored on the last agent message
-		// (sectionid, componentid) overwrote what the app sent.
-		JSONObject requestcontext = new JSONObject();
 		// boolean context
 		for (Iterator iterator = params.iterator(); iterator.hasNext();)
 		{
@@ -261,14 +254,13 @@ public class AgentModule extends BaseMediaModule
 				{
 					String keyName = key.substring("context_".length());
 					chatAgentContext.putContextValue(keyName, value);
-					requestcontext.put(keyName, value);
 				}
 			}
 		}
 
 		mediaArchive.saveData("agentcontext", chatAgentContext);
 		// assistantManager.sendSystemMessage(chatAgentContext, inReq.getUserName(), functionname);
-		assistantManager.sendSystemMessage(chatAgentContext, inReq.getUserName(), null, functionname, requestcontext);
+		assistantManager.sendSystemMessage(chatAgentContext, inReq.getUserName(), null, functionname);
 	}
 
 	public AgentContext loadAgentContext(WebPageRequest inReq) throws Exception

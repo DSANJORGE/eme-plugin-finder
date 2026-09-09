@@ -743,14 +743,6 @@ public class AssistantManager extends BaseAiManager implements SkillStatusListen
 
 	public void sendSystemMessage(ChatMessageContext inContext, String inUser, String message, String functionname)
 	{
-		sendSystemMessage(inContext, inUser, message, functionname, null);
-	}
-
-	/** TestU local patch: [inContextValues] are stored as the system message's
-	 * agentcontextvalues so the request's context wins when the channel
-	 * context is rebuilt from the newest message (see loadChatContext). */
-	public void sendSystemMessage(ChatMessageContext inContext, String inUser, String message, String functionname, JSONObject inContextValues)
-	{
 		MediaArchive archive = getMediaArchive();
 
 		// currentchannel set next function
@@ -763,10 +755,6 @@ public class AssistantManager extends BaseAiManager implements SkillStatusListen
 		chat.setValue("chatmessagestatus", "received");
 		chat.setValue("channel", inContext.getChannel().getId());
 		chat.setValue("message", message);
-		if (inContextValues != null && !inContextValues.isEmpty())
-		{
-			((MultiValued) chat).setJSONValue("agentcontextvalues", inContextValues);
-		}
 
 		archive.saveData("chatterbox", chat);
 		// inReq.putPageValue("chat", chat);

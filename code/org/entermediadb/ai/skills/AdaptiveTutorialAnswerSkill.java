@@ -18,15 +18,16 @@ import org.openedit.data.Searcher;
 public class AdaptiveTutorialAnswerSkill extends AdaptiveTutorialBaseSkill
 {
 	private static final Log log = LogFactory.getLog(AdaptiveTutorialAnswerSkill.class);
+
 	@Override
 	public void process(AgentContext inAgentContext)
 	{
 		TutorMessageContext tutorMessageContext = (TutorMessageContext) inAgentContext;
 
 		String channelid = tutorMessageContext.getChannel().getId();
-		String questionid = (String) tutorMessageContext.getMessageAgentContext("questionid");
-		String confidence = (String) tutorMessageContext.getMessageAgentContext("confidence");
-		String selectedoption = (String) tutorMessageContext.getMessageAgentContext("selectedoption");
+		String questionid = (String) tutorMessageContext.getContextValue("questionid");
+		String confidence = (String) tutorMessageContext.getContextValue("confidence");
+		String selectedoption = (String) tutorMessageContext.getContextValue("selectedoption");
 		// TestU local patch: topic (tutorial) and subtopic (section) of the
 		// attempt, so the tutor can reason about progress per section. The
 		// tutor channel is bound to the tutorial when the app sends none.
@@ -34,12 +35,13 @@ public class AdaptiveTutorialAnswerSkill extends AdaptiveTutorialBaseSkill
 		// tutorial cursor the continue skill stored on the agent message: the
 		// app answers questions from any section without moving that cursor.
 		String sectionid = (String) tutorMessageContext.getContextValue("sectionid");
-		log.info("TestU answer skill: request sectionid=" + sectionid + " message sectionid=" + tutorMessageContext.getMessageAgentContext("sectionid") + " local=" + tutorMessageContext.getContext().get("sectionid") + " root=" + tutorMessageContext.getRootContext().getContext().get("sectionid"));
+		log.info("TestU answer skill: request sectionid=" + sectionid + " message sectionid=" + tutorMessageContext.getContextValue("sectionid") + " local="
+			+ tutorMessageContext.getContext().get("sectionid") + " root=" + tutorMessageContext.getRootContext().getContext().get("sectionid"));
 		if (sectionid == null)
 		{
-			sectionid = (String) tutorMessageContext.getMessageAgentContext("sectionid");
+			sectionid = (String) tutorMessageContext.getContextValue("sectionid");
 		}
-		String tutorialid = (String) tutorMessageContext.getMessageAgentContext("tutorialid");
+		String tutorialid = (String) tutorMessageContext.getContextValue("tutorialid");
 		if (tutorialid == null)
 		{
 			tutorialid = tutorMessageContext.getChannel().get("dataid");
