@@ -2,6 +2,8 @@ package org.entermediadb.ai.skills;
 
 import java.util.Date;
 import java.util.Map;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.entermediadb.ai.AgentContext;
 import org.entermediadb.ai.TutorMessageContext;
 import org.entermediadb.ai.automation.RunningScenario;
@@ -15,15 +17,16 @@ import org.openedit.data.Searcher;
 
 public class AdaptiveTutorialAnswerSkill extends AdaptiveTutorialBaseSkill
 {
+	private static final Log log = LogFactory.getLog(AdaptiveTutorialAnswerSkill.class);
 	@Override
 	public void process(AgentContext inAgentContext)
 	{
 		TutorMessageContext tutorMessageContext = (TutorMessageContext) inAgentContext;
 
 		String channelid = tutorMessageContext.getChannel().getId();
-		String questionid = (String) tutorMessageContext.getContextValue("questionid");
-		String confidence = (String) tutorMessageContext.getContextValue("confidence");
-		String selectedoption = (String) tutorMessageContext.getContextValue("selectedoption");
+		String questionid = (String) tutorMessageContext.getMessageAgentContext("questionid");
+		String confidence = (String) tutorMessageContext.getMessageAgentContext("confidence");
+		String selectedoption = (String) tutorMessageContext.getMessageAgentContext("selectedoption");
 
 		if (channelid == null || questionid == null || selectedoption == null)
 		{
@@ -61,6 +64,8 @@ public class AdaptiveTutorialAnswerSkill extends AdaptiveTutorialBaseSkill
 		answer.setValue("iscorrect", iscorrect);
 		answer.setValue("pointsearned", points);
 		answer.setValue("bonusearned", bonus);
+		answer.setValue("entitytutorial", tutorialid);
+		answer.setValue("componentsection", sectionid);
 		answer.setValue("user", tutorMessageContext.getUserProfile().getUser().getId());
 		answer.setValue("datecreated", new Date());
 		answer.setValue("lastpenalty", new Date());
