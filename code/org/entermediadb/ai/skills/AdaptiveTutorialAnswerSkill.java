@@ -27,6 +27,23 @@ public class AdaptiveTutorialAnswerSkill extends AdaptiveTutorialBaseSkill
 		String questionid = (String) tutorMessageContext.getMessageAgentContext("questionid");
 		String confidence = (String) tutorMessageContext.getMessageAgentContext("confidence");
 		String selectedoption = (String) tutorMessageContext.getMessageAgentContext("selectedoption");
+		// TestU local patch: topic (tutorial) and subtopic (section) of the
+		// attempt, so the tutor can reason about progress per section. The
+		// tutor channel is bound to the tutorial when the app sends none.
+		// The request's context_sectionid (channel context) must win over the
+		// tutorial cursor the continue skill stored on the agent message: the
+		// app answers questions from any section without moving that cursor.
+		String sectionid = (String) tutorMessageContext.getContextValue("sectionid");
+		log.info("TestU answer skill: request sectionid=" + sectionid + " message sectionid=" + tutorMessageContext.getMessageAgentContext("sectionid") + " local=" + tutorMessageContext.getContext().get("sectionid") + " root=" + tutorMessageContext.getRootContext().getContext().get("sectionid"));
+		if (sectionid == null)
+		{
+			sectionid = (String) tutorMessageContext.getMessageAgentContext("sectionid");
+		}
+		String tutorialid = (String) tutorMessageContext.getMessageAgentContext("tutorialid");
+		if (tutorialid == null)
+		{
+			tutorialid = tutorMessageContext.getChannel().get("dataid");
+		}
 
 		if (channelid == null || questionid == null || selectedoption == null)
 		{
