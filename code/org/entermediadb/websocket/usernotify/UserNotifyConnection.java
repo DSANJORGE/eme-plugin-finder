@@ -138,7 +138,8 @@ public class UserNotifyConnection extends Endpoint implements MessageHandler.Par
 	}
 
 	/**
-	 * Not used. We dont get messages from clients, we only send them out
+	 * Clients send one login ({command: login, userid, entermediakey}) and then only keepalives; everything else flows out
+	 * through UserNotifyManager.sentNotifications.
 	 */
 	@Override
 	public synchronized void onMessage(String inData, boolean completed)
@@ -161,31 +162,28 @@ public class UserNotifyConnection extends Endpoint implements MessageHandler.Par
 		}
 		JSONObject map = (JSONObject) getJSONParser().parse(new StringReader(message));
 		String command = (String) map.get("command");
-		if ("keepalive".equals(command)) // Return all the annotation on this asset
+		// keepalive needs no reply: the traffic alone keeps proxies from closing an idle socket. It must not set the
+		// user id, which only an authenticated login may do (removeConnection looks the connection up by it).
+		if ("login".equals(command))
 		{
-			// receiveLogin(map);
-			// String userid = (String) map.get("userid");
-			String userid = String.valueOf(map.get("userid"));
-			setUserId(userid);
-			// String channelid = String.valueOf(map.get("channel"));
-			// setChannelId(channelid);
+			getUserNotifyManager().onMessage(this, map);
 		}
-
-		// Relay this message to the others
-		// JSONObject map = (JSONObject)getJSONParser().parse(new
-		// StringReader(message));
-		// getUserNotifyManager().onMessage(this,map);
 
 	}
 
+	// Request threads push concurrently and Basic remotes reject overlapping sends. Locks the remote, not this: onMessage
+	// holds this while login takes the manager's list lock, which sentNotifications holds while sending.
 	public boolean sendMessage(JSONObject json)
 	{
 		try
 		{
 			String command = (String) json.get("command");
 			json.put("connectionid", getCurrentConnectionId());
-			remoteEndpointBasic.sendText(json.toJSONString());
-			log.info("sent " + command + " to  " + getCurrentConnectionId());
+			synchronized (remoteEndpointBasic)
+			{
+				remoteEndpointBasic.sendText(json.toJSONString());
+			}
+			log.debug("sent " + command + " to  " + getCurrentConnectionId());
 		}
 		catch (Exception e)
 		{
