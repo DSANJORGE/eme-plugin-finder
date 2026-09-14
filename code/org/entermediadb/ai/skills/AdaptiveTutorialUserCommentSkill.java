@@ -54,7 +54,13 @@ public class AdaptiveTutorialUserCommentSkill extends AdaptiveTutorialBaseSkill
 		Collection<String> parentIds = getAssistantManager().findDocIdsForEntity("entitytutorial", tutorialid);
 
 		String answer = null;
-		if (!parentIds.isEmpty() && System.currentTimeMillis() - embedFailedAt < EMBED_RETRY_MS)
+		String embedkey = llmconnection.getApiKey();
+		if (!parentIds.isEmpty() && (embedkey == null || embedkey.isEmpty() || "YOUR_SECRET_TOKEN".equals(embedkey)))
+		{
+			// No real key: /chat answers "Invalid customer key" or hangs 30s before the fallback below.
+			log.info("Skipping embedding server /chat: no API key configured for the embed server");
+		}
+		else if (!parentIds.isEmpty() && System.currentTimeMillis() - embedFailedAt < EMBED_RETRY_MS)
 		{
 			log.info("Skipping embedding server /chat: failed " + (System.currentTimeMillis() - embedFailedAt) / 1000 + "s ago");
 		}
@@ -100,7 +106,6 @@ public class AdaptiveTutorialUserCommentSkill extends AdaptiveTutorialBaseSkill
 			// the app) and keyword-matched excerpts of the reference documents —
 			// instead of dropping the question or replying "no sources".
 			log.info("Answering from tutorial context for tutorial " + tutorialid);
-			tutorMessageContext.putContextValue("referenceexcerpts", findReferenceExcerpts(tutorialid, usermessage));
 			// The learner's answer and the question in play: only what THIS
 			// request carried (the app's context_* ride on its system message as
 			// agentcontextvalues). The channel context keeps the last session
@@ -117,6 +122,9 @@ public class AdaptiveTutorialUserCommentSkill extends AdaptiveTutorialBaseSkill
 			{
 				log.error("Failed to parse request values", e);
 			}
+			// The page the learner is looking at in the PDF viewer comes first, whatever the keywords match.
+			String viewed = viewedPage(requestValue(tutorMessageContext, request, "entityasset"), requestValue(tutorMessageContext, request, "pagenum"));
+			tutorMessageContext.putContextValue("referenceexcerpts", viewed + findReferenceExcerpts(tutorialid, usermessage));
 			String selected = requestValue(tutorMessageContext, request, "selectedoption");
 			String confidence = requestValue(tutorMessageContext, request, "confidence");
 			String prompt = usermessage;
@@ -152,7 +160,22 @@ public class AdaptiveTutorialUserCommentSkill extends AdaptiveTutorialBaseSkill
 				{
 					qb.append("Rationale: ").append(question.get("rationale")).append("\n");
 				}
+				// The question's authored source: citable like an excerpt.
+				if (question.get("sourcecite") != null)
+				{
+					qb.append("Source of the question [").append(question.get("sourcecite")).append(question.get("sourcepage") == null ? "" : ", p. " + question.get("sourcepage")).append("]: ").append(question.get("sourcequote") == null ? "" : question.get("sourcequote")).append("\n");
+				}
 				prompt = qb + "\n" + prompt;
+			}
+			String mode = requestValue(tutorMessageContext, request, "mode");
+			if (mode != null && mode.length() > 0)
+			{
+				prompt = "Mode: " + mode + "\n" + prompt;
+			}
+			String recent = recentConversation(channelid, tutorMessageContext.getUserMessage() == null ? "" : tutorMessageContext.getUserMessage().getId());
+			if (recent.length() > 0)
+			{
+				prompt = recent + "\n" + prompt;
 			}
 			tutorMessageContext.putContextValue("chathistory", chatHistory);
 			tutorMessageContext.putContextValue("learnerprompt", prompt);
@@ -558,6 +581,23 @@ public class AdaptiveTutorialUserCommentSkill extends AdaptiveTutorialBaseSkill
 	 * to the tutorial, split into entityassetpage records with markdowncontent) as prompt text, each
 	 * headed by the document title and page so the tutor can cite it. Empty when nothing matches.
 	 */
+	/** One page of a document as a citable excerpt, or "" when either id is missing or the page is unknown. */
+	protected String viewedPage(String inAssetId, String inPage)
+	{
+		if (inAssetId == null || inAssetId.isEmpty() || inPage == null || inPage.isEmpty())
+		{
+			return "";
+		}
+		Data page = getMediaArchive().query("entityassetpage").exact("entityasset", inAssetId).exact("pagenum", inPage).searchOne();
+		String text = page == null ? null : page.get("markdowncontent");
+		if (text == null || text.isEmpty())
+		{
+			return "";
+		}
+		Data doc = getMediaArchive().getCachedData("entityasset", inAssetId);
+		return "[" + (doc == null ? "Reference document" : doc.getName()) + ", p. " + inPage + "] (the page the learner is looking at)\n" + (text.length() > 4000 ? text.substring(0, 4000) : text) + "\n\n";
+	}
+
 	protected String findReferenceExcerpts(String tutorialid, String query)
 	{
 		if (tutorialid == null || query == null || query.trim().isEmpty())
@@ -585,7 +625,15 @@ public class AdaptiveTutorialUserCommentSkill extends AdaptiveTutorialBaseSkill
 		{
 			return "";
 		}
-		Collection<Data> pages = getMediaArchive().query("entityassetpage").orgroup("entityasset", docs).freeform("markdowncontent", terms.toString()).hitsPerPage(3).search().getPageOfHits();
+		// markdowncontent is not_analyzed (one keyword per page), so a word search there never
+		// matched and every reply had no excerpts. description is analyzed and holds the page
+		// text. All words first; any word when no page has them all.
+		// ponytail: wildcard OR is unranked; the embed server's semantic /chat replaces this.
+		Collection<Data> pages = getMediaArchive().query("entityassetpage").orgroup("entityasset", docs).freeform("description", terms.toString()).hitsPerPage(3).search().getPageOfHits();
+		if (pages.isEmpty())
+		{
+			pages = getMediaArchive().query("entityassetpage").orgroup("entityasset", docs).freeform("description", terms.toString().replace(" ", " OR ")).hitsPerPage(3).search().getPageOfHits();
+		}
 		StringBuilder out = new StringBuilder();
 		for (Data page : pages)
 		{
@@ -596,7 +644,8 @@ public class AdaptiveTutorialUserCommentSkill extends AdaptiveTutorialBaseSkill
 			}
 			Data doc = getMediaArchive().getCachedData("entityasset", page.get("entityasset"));
 			out.append("[").append(doc == null ? "Reference document" : doc.getName()).append(", p. ").append(page.get("pagenum")).append("]\n");
-			out.append(text.length() > 2500 ? text.substring(0, 2500) : text).append("\n\n");
+			// 2500 cut the second half of a typical page (~2800 chars).
+			out.append(text.length() > 4000 ? text.substring(0, 4000) : text).append("\n\n");
 		}
 		return out.toString();
 	}
@@ -638,57 +687,96 @@ public class AdaptiveTutorialUserCommentSkill extends AdaptiveTutorialBaseSkill
 					.append(" correct.\n");
 			}
 		}
-		if (tutorialid != null && tutorialid.length() > 0)
+		// Mastery as the server computed it (tutormastery, LearningEngine.recomputeMastery, every 15 min)
+		// instead of re-tallying every answer of the learner on each message.
+		// ponytail: up to 15 min stale; the question's own attempts above are live.
+		try
 		{
-			Collection<MultiValued> inTutorial = getMediaArchive().query("tutoranswer").exact("user", userId).exact("entitytutorial", tutorialid).search();
-			if (!inTutorial.isEmpty())
+			Data section = sectionid == null ? null : getMediaArchive().getCachedData("componentsection", sectionid);
+			appendMastery(out, "current subtopic" + (section == null ? "" : " '" + section.getName() + "'"), getMediaArchive().getData("tutormastery", userId + "_" + sectionid));
+			Data tutorial = tutorialid == null ? null : getMediaArchive().getCachedData("entitytutorial", tutorialid);
+			String topicid = tutorial == null ? null : tutorial.get("entitytopic");
+			Data topic = topicid == null ? null : getMediaArchive().getCachedData("entitytopic", topicid);
+			if (topicid != null)
 			{
-				int correct = 0;
-				// section id -> {answers, correct}; insertion order = first seen
-				Map<String, int[]> bySection = new LinkedHashMap<>();
-				for (MultiValued a : inTutorial)
-				{
-					boolean ok = isCorrect(a);
-					if (ok)
-					{
-						correct++;
-					}
-					String sec = a.get("componentsection");
-					int[] tally = bySection.computeIfAbsent(sec == null ? "" : sec, k -> new int[2]);
-					tally[0]++;
-					if (ok)
-					{
-						tally[1]++;
-					}
-				}
-				out.append("Progress of the learner in this tutorial (topic): ").append(correct).append(" correct out of ").append(inTutorial.size()).append(" answers. By section (subtopic):");
-				for (Map.Entry<String, int[]> e : bySection.entrySet())
-				{
-					Data section = e.getKey().isEmpty() ? null : getMediaArchive().getData("componentsection", e.getKey());
-					out.append(" ").append(section == null ? "unknown section" : section.getName()).append(" ").append(e.getValue()[1]).append("/").append(e.getValue()[0]);
-					if (e.getKey().equals(sectionid))
-					{
-						out.append(" (current)");
-					}
-					out.append(";");
-				}
-				out.append("\n");
+				appendMastery(out, "topic" + (topic == null ? "" : " '" + topic.getName() + "'"), getMediaArchive().getData("tutormastery", userId + "_topic_" + topicid));
 			}
 		}
-		Collection<MultiValued> all = getMediaArchive().query("tutoranswer").exact("user", userId).search();
-		if (!all.isEmpty())
+		catch (Exception e)
 		{
-			int correct = 0;
-			for (MultiValued a : all)
-			{
-				if (isCorrect(a))
-				{
-					correct++;
-				}
-			}
-			out.append("Overall progress of the learner across all questions: ").append(correct).append(" correct out of ").append(all.size()).append(" answers.\n");
+			log.info("No tutormastery for " + userId + ": " + e);
 		}
 		return out.toString();
+	}
+
+	private void appendMastery(StringBuilder inOut, String inScope, Data inRow)
+	{
+		if (inRow == null)
+		{
+			return;
+		}
+		inOut.append("Mastery of the learner in the ").append(inScope).append(": ").append(inRow.get("masterypercent")).append("% (band ").append(inRow.get("band")).append("), ")
+			.append(inRow.get("answered")).append(" of ").append(inRow.get("questions")).append(" questions answered, ")
+			.append(inRow.get("certainwrong")).append(" wrong answers given with confidence, ")
+			.append(inRow.get("unsurecorrect")).append(" right answers given unsure.\n");
+	}
+
+	/**
+	 * The last few turns of this channel, oldest first: what the learner asked or answered and what the tutor
+	 * replied, so a follow-up like "¿y por qué?" has its antecedent. Each turn cut to 400 chars.
+	 */
+	protected String recentConversation(String inChannelId, String inCurrentMessageId)
+	{
+		Collection<Data> rows = getMediaArchive().query("chatterbox").exact("channel", inChannelId).orgroup("functionname", "chat_tutor_usercomment chat_tutor_answer").sort("dateDown").hitsPerPage(7).search().getPageOfHits();
+		java.util.LinkedList<String> turns = new java.util.LinkedList<String>();
+		JSONParser parser = new JSONParser();
+		for (Data row : rows)
+		{
+			if (row.getId().equals(inCurrentMessageId))
+			{
+				continue;
+			}
+			String text;
+			if ("agent".equals(row.get("user")))
+			{
+				text = "Tutor: " + row.get("message");
+			}
+			else
+			{
+				JSONObject values = null;
+				try
+				{
+					values = (JSONObject) parser.parse(String.valueOf(row.get("agentcontextvalues")));
+				}
+				catch (Exception e)
+				{
+					continue;
+				}
+				if (values == null)
+				{
+					continue; // rows saved without agentcontextvalues parse "null" to null
+				}
+				if (values.get("query") != null)
+				{
+					text = "Learner: " + values.get("query");
+				}
+				else if (values.get("selectedoption") != null)
+				{
+					text = "Learner answered " + values.get("selectedoption") + " (" + values.get("confidence") + ")";
+				}
+				else
+				{
+					continue;
+				}
+			}
+			// A past not-found reply made the model repeat it even with excerpts in hand.
+			if (text.endsWith("null") || text.endsWith("No content available") || text.startsWith("Tutor: No lo encuentro en las fuentes"))
+			{
+				continue;
+			}
+			turns.addFirst(text.length() > 400 ? text.substring(0, 400) + "…" : text);
+		}
+		return turns.isEmpty() ? "" : "Recent conversation, oldest first:\n" + String.join("\n", turns) + "\n";
 	}
 
 	private boolean isCorrect(MultiValued answer)
