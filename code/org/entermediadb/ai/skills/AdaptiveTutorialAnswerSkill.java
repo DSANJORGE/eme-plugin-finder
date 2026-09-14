@@ -58,38 +58,66 @@ public class AdaptiveTutorialAnswerSkill extends AdaptiveTutorialBaseSkill
 			return;
 		}
 
-		boolean iscorrect = selectedoption.equals(question.get("correctoption"));
-
-		Map<String, Double> cognitivelevelpoints = getCognitiveLevelPoints();
-		Map<String, Double> answerconfidencebonus = getAnswerConfidenceBonus();
-
-		double allottedpoints = cognitivelevelpoints.getOrDefault(question.get("mcqcognitivelevel"), 0.0);
-
-		double points = 0.0;
-		if (iscorrect)
-		{
-			points = allottedpoints;
-		}
-
-		double bonus = allottedpoints * (answerconfidencebonus.getOrDefault(confidence, 0.0) / 100.0);
-
 		Searcher searcher = getMediaArchive().getSearcher("tutoranswer");
+		String userid = tutorMessageContext.getUserProfile().getUser().getId();
+		boolean iscorrect;
+		// TestU learning engine v1: the app stores the answer first through services/testu/learn/answer.json, which
+		// verifies mode, scope, hierarchy and hint level, then sends only its id here for the tutor's feedback.
+		Object answerid = tutorMessageContext.getContextValue("answerid");
+		if (answerid != null && !answerid.toString().trim().isEmpty())
+		{
+			Data stored = (Data) searcher.searchById(answerid.toString().trim());
+			if (stored == null || !userid.equals(stored.get("user")) || !questionid.equals(stored.get("entityquestion")))
+			{
+				log.info("TestU answer skill: answerid " + answerid + " is not this user's answer to " + questionid);
+				return;
+			}
+			// Feedback follows the stored, verified answer, not the message's own values.
+			selectedoption = stored.get("selectedoption");
+			confidence = stored.get("answerconfidence");
+			iscorrect = "true".equals(String.valueOf(stored.getValue("iscorrect")));
+			if (stored.get("channel") == null)
+			{
+				stored.setValue("channel", channelid);
+				searcher.saveData(stored);
+			}
+		}
+		else
+		{
+			iscorrect = selectedoption.equals(question.get("correctoption"));
 
-		Data answer = searcher.createNewData();
-		answer.setValue("channel", channelid);
-		answer.setValue("entityquestion", questionid);
-		answer.setValue("answerconfidence", confidence);
-		answer.setValue("selectedoption", selectedoption);
-		answer.setValue("iscorrect", iscorrect);
-		answer.setValue("pointsearned", points);
-		answer.setValue("bonusearned", bonus);
-		answer.setValue("entitytutorial", tutorialid);
-		answer.setValue("componentsection", sectionid);
-		answer.setValue("user", tutorMessageContext.getUserProfile().getUser().getId());
-		answer.setValue("datecreated", new Date());
-		answer.setValue("lastpenalty", new Date());
+			Map<String, Double> cognitivelevelpoints = getCognitiveLevelPoints();
+			Map<String, Double> answerconfidencebonus = getAnswerConfidenceBonus();
 
-		searcher.saveData(answer);
+			double allottedpoints = cognitivelevelpoints.getOrDefault(question.get("mcqcognitivelevel"), 0.0);
+
+			double points = 0.0;
+			if (iscorrect)
+			{
+				points = allottedpoints;
+			}
+
+			double bonus = allottedpoints * (answerconfidencebonus.getOrDefault(confidence, 0.0) / 100.0);
+
+			Data answer = searcher.createNewData();
+			answer.setValue("channel", channelid);
+			answer.setValue("entityquestion", questionid);
+			answer.setValue("answerconfidence", confidence);
+			answer.setValue("selectedoption", selectedoption);
+			answer.setValue("iscorrect", iscorrect);
+			answer.setValue("pointsearned", points);
+			answer.setValue("bonusearned", bonus);
+			answer.setValue("entitytutorial", tutorialid);
+			answer.setValue("componentsection", sectionid);
+			answer.setValue("user", userid);
+			answer.setValue("datecreated", new Date());
+			answer.setValue("lastpenalty", new Date());
+			// Not verified by answer.json (older app builds): stored as legacy, which never advances the learning sequence.
+			// Client-sent mode, scope and hint level are ignored.
+			answer.setValue("mode", "legacy");
+
+			searcher.saveData(answer);
+		}
 
 		tutorMessageContext.putContextValue("iscorrect", iscorrect);
 		tutorMessageContext.putContextValue("question", question);
