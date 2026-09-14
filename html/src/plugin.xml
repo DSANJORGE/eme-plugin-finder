@@ -273,12 +273,6 @@
 
 	<bean id="postMail" class="org.entermediadb.email.PostMail">
 		<!-- property name="smtpUsername"> <value>username</value> </property> <property name="smtpPassword"> <value></value> </property -->
-		<!-- TestU local patch: EnterMedia's relay (smtp.entermediadb.org) hangs from this Mac and never
-		     delivers, which blocks sendusercode.json. Send to a local sink instead:
-		     python3 -m smtpd -n -c DebuggingServer localhost:1025 (prints the login code). -->
-		<property name="smtpSecured"> <value>false</value> </property>
-		<property name="smtpServer"> <value>localhost</value> </property>
-		<property name="port"> <value>1025</value> </property>
 		<property name="pageManager">
 			<ref bean="pageManager" />
 		</property>
