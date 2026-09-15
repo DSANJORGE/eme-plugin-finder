@@ -827,6 +827,11 @@ public class AdminModule extends BaseMediaModule
 
 		inReq.putPageValue("refresh_token", getCookieEncryption().getEnterMediaKey(inUser));
 
+		// token.json renders "user" from the request user, which a fresh client
+		// (no session/key cookie) never has; bind it here like Admin.login does.
+		inReq.putPageValue("user", inUser);
+		inReq.putPageValue("userprofile", getMediaArchive(inReq).getUserProfileManager().loadUserProfile(inReq, inReq.findPathValue("catalogid"), inUser.getUserName()));
+
 		inReq.putPageValue("commandSucceeded", "ok");
 	}
 
