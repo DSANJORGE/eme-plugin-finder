@@ -1,7 +1,8 @@
 #!/bin/sh
 # Runs every golden prompt against each named aiserver through services/llm/evalcall.json (no failover).
 # Usage: tools/llmeval/run.sh <golden.jsonl> <aiserver-id>...
-#   EME_BASE (default http://localhost:8080/site/mediadb), EME_ADMIN_PW (default admin), DRYRUN=1 renders only.
+#   EME_BASE (default http://localhost:8080/site/mediadb), EME_ADMIN_PW (default admin), DRYRUN=1 renders only,
+#   RUN_DELAY=<seconds> pause between calls (rate-limited providers).
 # Output: <golden dir>/results/<YYYYmmdd-HHMM>-<aiserver>.jsonl
 set -eu
 G=$1; shift
@@ -13,7 +14,7 @@ OUTDIR=$(dirname "$G")/results; mkdir -p "$OUTDIR"; STAMP=$(date +%Y%m%d-%H%M)
 for S in "$@"; do
   OUT="$OUTDIR/$STAMP-$S.jsonl"
   python3 - "$G" "$S" "$B" "$J" "${DRYRUN:-0}" > "$OUT" <<'PY'
-import json, sys, urllib.request, urllib.parse
+import json, os, sys, time, urllib.request, urllib.parse
 golden, server, base, jar, dry = sys.argv[1:6]
 cookie = '; '.join(f"{p[5]}={p[6]}" for p in (l.rstrip('\n').split('\t') for l in open(jar)) if len(p) == 7)
 for line in open(golden):
@@ -22,6 +23,7 @@ for line in open(golden):
     g = json.loads(line)
     form = {'function': g['function'], 'aiserver': server, 'input': json.dumps(g['input'])}
     if dry == '1': form['dryrun'] = 'true'
+    time.sleep(float(os.environ.get('RUN_DELAY', '0')))
     req = urllib.request.Request(f"{base}/services/llm/evalcall.json", data=urllib.parse.urlencode(form).encode(), headers={'Cookie': cookie})
     try:
         d = json.load(urllib.request.urlopen(req, timeout=600))
