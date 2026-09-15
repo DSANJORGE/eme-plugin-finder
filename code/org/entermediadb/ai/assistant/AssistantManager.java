@@ -23,6 +23,7 @@ import org.entermediadb.ai.classify.EmbeddingManager;
 import org.entermediadb.ai.llm.AutomationStep;
 import org.entermediadb.ai.llm.BaseAgentContext;
 import org.entermediadb.ai.llm.LlmResponse;
+import org.entermediadb.ai.llm.router.RoutedLlmConnection;
 import org.entermediadb.asset.MediaArchive;
 import org.entermediadb.asset.util.JsonUtil;
 import org.entermediadb.find.EntityManager;
@@ -796,7 +797,7 @@ public class AssistantManager extends BaseAiManager implements SkillStatusListen
 				String key = server.get("serverapikey");
 				if (key != null)
 				{
-					connection.addSharedHeader("Authorization", "Bearer " + server);
+					connection.addSharedHeader("Authorization", "Bearer " + key);
 				}
 				long start = System.currentTimeMillis();
 				try
@@ -811,13 +812,14 @@ public class AssistantManager extends BaseAiManager implements SkillStatusListen
 							Integer diff = Math.round(end - start);
 							inLog.info(address + " ok run in " + diff + " milliseconds");
 							speeds.put(serverroot, diff);
+							RoutedLlmConnection.closeBreaker(getMediaArchive().getCatalogId(), server.getId());
 						}
 					}
 				}
 				catch (Exception ex)
 				{
 					inLog.info(address + " had error " + ex);
-					speeds.put(serverroot, Integer.MAX_VALUE); // Push back
+					speeds.put(serverroot, -1); // Push back
 					// Ignore
 				}
 			}
@@ -829,7 +831,7 @@ public class AssistantManager extends BaseAiManager implements SkillStatusListen
 			{
 				String serverroot = server.get("serverroot");
 				Integer speed = speeds.get(serverroot);
-				server.setValue("ordering", speed);
+				server.setValue("healthms", speed);
 				tosave.add(server);
 			}
 			getMediaArchive().getSearcher("aiserver").saveAllData(tosave, null);
