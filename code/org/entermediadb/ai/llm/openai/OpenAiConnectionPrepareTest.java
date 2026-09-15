@@ -77,6 +77,12 @@ public class OpenAiConnectionPrepareTest extends TestCase
 		server.setValue("timeoutseconds", "9999");
 		assertEquals(1200, c.getTimeoutSeconds());
 
+		server.setValue("timeoutseconds", "0");
+		assertEquals(30, c.getTimeoutSeconds());
+
+		server.setValue("timeoutseconds", "-5");
+		assertEquals(30, c.getTimeoutSeconds());
+
 		c.setTimeoutOverride(7);
 		assertEquals(7, c.getTimeoutSeconds());
 	}

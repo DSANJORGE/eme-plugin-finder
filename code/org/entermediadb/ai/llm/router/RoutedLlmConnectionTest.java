@@ -160,10 +160,11 @@ public class RoutedLlmConnectionTest extends TestCase
 
 	public void testHalfOpenProbeClosesBreaker()
 	{
-		serverA = server("a", "1", "0"); // opens after 1 failure, window 0 minutes
+		serverA = server("a", "1", "5"); // opens after 1 failure; window forced elapsed below (0/blank now means "use default")
 		a.then(new RuntimeException("boom")).then("volví");
 		RoutedLlmConnection r = router(serverA, serverB);
 		r.callStructure(null, "fn");
+		RoutedLlmConnection.BREAKERS.get("test/a").openedAt = 0; // simulate the window having elapsed
 		logged.clear();
 		assertEquals("volví", r.callStructure(null, "fn").getMessage());
 		assertEquals(Arrays.asList("a:breakerclosed", "a:ok"), logged);
@@ -319,7 +320,7 @@ public class RoutedLlmConnectionTest extends TestCase
 	public void testAirouteSkipsDisabledServer()
 	{
 		Data disabledC = server("c", "2", "5");
-		disabledC.setValue("enabled", "false");
+		disabledC.setValue("disabled", "true");
 
 		BaseData route = new BaseData();
 		route.setId("fn");
@@ -335,5 +336,28 @@ public class RoutedLlmConnectionTest extends TestCase
 
 		assertEquals("desde b", r.callStructure(null, "fn").getMessage());
 		assertEquals(Arrays.asList("b:ok"), logged);
+	}
+
+	public void testZeroConfigValuesUseDefaults()
+	{
+		Data zeroServer = server("a", "0", "0");
+		zeroServer.setValue("timeoutseconds", "0");
+		a.setAiServerData(zeroServer);
+
+		BaseData route = new BaseData();
+		route.setId("fn");
+		route.setValue("aiservers", Arrays.asList("a"));
+		route.setValue("timeoutseconds", "0");
+
+		Map<String, Data> byId = new HashMap<String, Data>();
+		byId.put("a", zeroServer);
+
+		a.then("ok");
+		RoutedLlmConnection r = routedOn(archiveWithRoute(route, byId));
+
+		assertEquals("ok", r.callStructure(null, "fn").getMessage());
+		assertEquals(1, a.calls);
+		assertEquals(Integer.valueOf(30), a.observedTimeoutSeconds);
+		assertEquals(Arrays.asList("a:ok"), logged);
 	}
 }

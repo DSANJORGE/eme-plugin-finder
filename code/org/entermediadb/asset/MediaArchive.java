@@ -3421,7 +3421,7 @@ public class MediaArchive implements CatalogEnabled
 			for (Object hit : query("aiserver").exact("aiservertype", inServerType).sort("ordering").search())
 			{
 				Data server = (Data) hit;
-				if (!"false".equals(server.get("enabled")))
+				if (!Boolean.parseBoolean(server.get("disabled")))
 				{
 					servers.add(server);
 				}

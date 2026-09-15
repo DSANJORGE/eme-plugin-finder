@@ -26,7 +26,7 @@ import org.openedit.data.Searcher;
 
 /**
  * One LlmConnection that walks a chain of aiserver rows: the airoute row for the function if
- * present, else every enabled row of the type by ordering. Fails over on any error, timeout or
+ * present, else every row not marked disabled of the type by ordering. Fails over on any error, timeout or
  * empty reply; a per-row circuit breaker skips rows that keep failing; every attempt is an
  * aicalllog row.
  */
@@ -126,7 +126,7 @@ public class RoutedLlmConnection implements LlmConnection
 				for (Object id : ids)
 				{
 					Data server = fieldMediaArchive.getData("aiserver", String.valueOf(id));
-					if (server != null && !"false".equals(server.get("enabled")))
+					if (server != null && !Boolean.parseBoolean(server.get("disabled")))
 					{
 						chain.add(server);
 					}
@@ -154,7 +154,8 @@ public class RoutedLlmConnection implements LlmConnection
 		}
 		try
 		{
-			return Integer.valueOf(value.trim());
+			int seconds = Integer.parseInt(value.trim());
+			return seconds <= 0 ? null : Integer.valueOf(seconds);
 		}
 		catch (NumberFormatException ex)
 		{
@@ -185,7 +186,8 @@ public class RoutedLlmConnection implements LlmConnection
 		}
 		try
 		{
-			return Integer.parseInt(value.trim());
+			int parsed = Integer.parseInt(value.trim());
+			return parsed <= 0 ? inDefault : parsed;
 		}
 		catch (NumberFormatException ex)
 		{

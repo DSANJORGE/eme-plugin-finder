@@ -96,7 +96,11 @@ public class BaseLlmConnection implements LlmConnection
 			{
 				try
 				{
-					seconds = Integer.parseInt(value.trim());
+					int parsed = Integer.parseInt(value.trim());
+					if (parsed > 0)
+					{
+						seconds = parsed;
+					}
 				}
 				catch (NumberFormatException ex)
 				{

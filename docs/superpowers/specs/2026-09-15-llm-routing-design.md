@@ -16,7 +16,7 @@ Streaming, hedged parallel calls, per-user routing, fine-tuning workflow, the re
 
 | Field | Type | Default | Meaning |
 |---|---|---|---|
-| `enabled` | boolean | true | Router ignores disabled rows |
+| `disabled` | boolean | false | Router skips rows marked disabled |
 | `timeoutseconds` | number | 30 | Socket timeout per attempt |
 | `breakerfailures` | number | 3 | Consecutive failures that open the breaker |
 | `breakerminutes` | number | 5 | Open window before one probe |
@@ -25,7 +25,7 @@ Streaming, hedged parallel calls, per-user routing, fine-tuning workflow, the re
 
 `aifunctions` (multi-value, never read) is left as is. `llmtype` list gains `anthropic`; bean `anthropicConnection`.
 
-`baseaiserver.xml` ships example rows `groq`, `openrouter`, `together`, `anthropic` with `enabled=false` and blank keys.
+`baseaiserver.xml` ships example rows `groq`, `openrouter`, `together`, `anthropic` with `disabled=true` and blank keys.
 
 ### `airoute` (new)
 
@@ -140,3 +140,4 @@ One PR per repo (finder, catalog, mediadb), branch `llm-routing`: data model, ro
 - `AnthropicConnection.getLlmProtocol()` returns `openai` so the existing `ai/openai` → `ai/default` template fallback applies; no new template directory.
 - Router instances are rebuilt after 60 s instead of on cache clears.
 - Admin views: `airoute` and `aicalllog` use the generic admin data manager; no bespoke list view.
+- aiserver.enabled became aiserver.disabled and every numeric config treats 0/blank as default: Elasticsearch stores a missing boolean as false and a missing number as 0, so an existing row would otherwise read as disabled with a 1 s timeout and a breaker that opens on the first call.

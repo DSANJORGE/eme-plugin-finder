@@ -35,6 +35,7 @@ cd /Users/DSANJORGE/Code/EMEGenAILabs/eme-server-minsur && bin/compile.sh >/dev/
 - The eval endpoint is `services/llm/evalcall.json` in the mediadb plugin (`services/ai/` is a virtual directory owned by `JsonDataModule.handleAiFunction`).
 - `aicalllog` has no `user` column: the event thread has no request user.
 - Router instances are rebuilt when older than 60 s instead of relying on cache clears, because nothing clears the `llmconnection` cache when an admin edits `aiserver` or `airoute` rows.
+- aiserver.enabled became aiserver.disabled and every numeric config treats 0/blank as default: Elasticsearch stores a missing boolean as false and a missing number as 0, so an existing row would otherwise read as disabled with a 1 s timeout and a breaker that opens on the first call.
 
 ## File structure
 
