@@ -1,7 +1,10 @@
 package org.entermediadb.ai.skills;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import org.apache.commons.logging.Log;
@@ -122,9 +125,6 @@ public class AdaptiveTutorialUserCommentSkill extends AdaptiveTutorialBaseSkill
 			{
 				log.error("Failed to parse request values", e);
 			}
-			// The page the learner is looking at in the PDF viewer comes first, whatever the keywords match.
-			String viewed = viewedPage(requestValue(tutorMessageContext, request, "entityasset"), requestValue(tutorMessageContext, request, "pagenum"));
-			tutorMessageContext.putContextValue("referenceexcerpts", viewed + findReferenceExcerpts(tutorialid, usermessage));
 			String selected = requestValue(tutorMessageContext, request, "selectedoption");
 			String confidence = requestValue(tutorMessageContext, request, "confidence");
 			String prompt = usermessage;
@@ -144,6 +144,12 @@ public class AdaptiveTutorialUserCommentSkill extends AdaptiveTutorialBaseSkill
 			// marker for the current one; name it explicitly or the model picks
 			// the last one it saw.
 			Data question = questionid == null ? null : getMediaArchive().getData("entityquestion", questionid);
+			// The page the learner is looking at in the PDF viewer comes first, whatever the keywords match.
+			String viewed = viewedPage(requestValue(tutorMessageContext, request, "entityasset"), requestValue(tutorMessageContext, request, "pagenum"));
+			// A session follow-up ("¿Por qué las otras opciones están mal?") has no keywords of its own: the
+			// question's text and its correct option find the pages the learner's words cannot.
+			String questiontext = question == null ? null : question.get("question") + " " + question.get("option_" + String.valueOf(question.get("correctoption")).toLowerCase());
+			tutorMessageContext.putContextValue("referenceexcerpts", viewed + findReferenceExcerpts(tutorialid, usermessage, questiontext));
 			if (question != null)
 			{
 				StringBuilder qb = new StringBuilder("Current question: ").append(question.get("question")).append("\n");
@@ -598,9 +604,37 @@ public class AdaptiveTutorialUserCommentSkill extends AdaptiveTutorialBaseSkill
 		return "[" + (doc == null ? "Reference document" : doc.getName()) + ", p. " + inPage + "] (the page the learner is looking at)\n" + (text.length() > 4000 ? text.substring(0, 4000) : text) + "\n\n";
 	}
 
-	protected String findReferenceExcerpts(String tutorialid, String query)
+	/**
+	 * Pages of the tutorial's documents matching the queries, tried in order: every word of a query first
+	 * (the learner's words, then the question's), any word of a query last. "" when nothing matches.
+	 */
+	protected String findReferenceExcerpts(String tutorialid, String... queries)
 	{
-		if (tutorialid == null || query == null || query.trim().isEmpty())
+		if (tutorialid == null)
+		{
+			return "";
+		}
+		// ponytail: plain keyword match on the page text; the embedding server does the
+		// real semantic retrieval when its /chat works. Words of 4+ letters only,
+		// punctuation stripped: "?" and "*" are wildcards to the search engine, so
+		// "¿Qué son los derechos humanos?" matched nothing (2026-09-04).
+		List<String> termsets = new ArrayList<String>();
+		for (String query : queries)
+		{
+			StringBuilder terms = new StringBuilder();
+			for (String word : query == null ? new String[0] : query.split("[^\\p{L}\\p{N}]+"))
+			{
+				if (word.length() >= 4)
+				{
+					terms.append(terms.length() > 0 ? " " : "").append(word);
+				}
+			}
+			if (terms.length() > 0)
+			{
+				termsets.add(terms.toString());
+			}
+		}
+		if (termsets.isEmpty())
 		{
 			return "";
 		}
@@ -609,30 +643,26 @@ public class AdaptiveTutorialUserCommentSkill extends AdaptiveTutorialBaseSkill
 		{
 			return "";
 		}
-		// ponytail: plain keyword match on the page text; the embedding server does the
-		// real semantic retrieval when its /chat works. Words of 4+ letters only,
-		// punctuation stripped: "?" and "*" are wildcards to the search engine, so
-		// "¿Qué son los derechos humanos?" matched nothing (2026-09-04).
-		StringBuilder terms = new StringBuilder();
-		for (String word : query.split("[^\\p{L}\\p{N}]+"))
-		{
-			if (word.length() >= 4)
-			{
-				terms.append(terms.length() > 0 ? " " : "").append(word);
-			}
-		}
-		if (terms.length() == 0)
-		{
-			return "";
-		}
 		// markdowncontent is not_analyzed (one keyword per page), so a word search there never
 		// matched and every reply had no excerpts. description is analyzed and holds the page
 		// text. All words first; any word when no page has them all.
 		// ponytail: wildcard OR is unranked; the embed server's semantic /chat replaces this.
-		Collection<Data> pages = getMediaArchive().query("entityassetpage").orgroup("entityasset", docs).freeform("description", terms.toString()).hitsPerPage(3).search().getPageOfHits();
-		if (pages.isEmpty())
+		Collection<Data> pages = Collections.emptyList();
+		for (String terms : termsets)
 		{
-			pages = getMediaArchive().query("entityassetpage").orgroup("entityasset", docs).freeform("description", terms.toString().replace(" ", " OR ")).hitsPerPage(3).search().getPageOfHits();
+			pages = getMediaArchive().query("entityassetpage").orgroup("entityasset", docs).freeform("description", terms).hitsPerPage(3).search().getPageOfHits();
+			if (!pages.isEmpty())
+			{
+				break;
+			}
+		}
+		for (String terms : termsets)
+		{
+			if (!pages.isEmpty())
+			{
+				break;
+			}
+			pages = getMediaArchive().query("entityassetpage").orgroup("entityasset", docs).freeform("description", terms.replace(" ", " OR ")).hitsPerPage(3).search().getPageOfHits();
 		}
 		StringBuilder out = new StringBuilder();
 		for (Data page : pages)
