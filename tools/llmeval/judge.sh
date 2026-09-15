@@ -9,7 +9,7 @@ OUT="${R%.jsonl}.judged.jsonl"
 python3 - "$R" "$JUDGE" "$B" "$J" > "$OUT" <<'PY'
 import json, re, sys, urllib.request, urllib.parse
 path, judge, base, jar = sys.argv[1:5]
-cookie = '; '.join(f"{p[5]}={p[6]}" for p in (l.split('\t') for l in open(jar)) if len(p) == 7)
+cookie = '; '.join(f"{p[5]}={p[6]}" for p in (l.rstrip('\n').split('\t') for l in open(jar)) if len(p) == 7)
 def checks(reply, exp):
     failed = []
     body = re.sub(r'^[ \t]*>>.*$', '', reply, flags=re.M)

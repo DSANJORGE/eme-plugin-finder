@@ -15,7 +15,7 @@ for S in "$@"; do
   python3 - "$G" "$S" "$B" "$J" "${DRYRUN:-0}" > "$OUT" <<'PY'
 import json, sys, urllib.request, urllib.parse
 golden, server, base, jar, dry = sys.argv[1:6]
-cookie = '; '.join(f"{p[5]}={p[6]}" for p in (l.split('\t') for l in open(jar)) if len(p) == 7)
+cookie = '; '.join(f"{p[5]}={p[6]}" for p in (l.rstrip('\n').split('\t') for l in open(jar)) if len(p) == 7)
 for line in open(golden):
     line = line.strip()
     if not line: continue
