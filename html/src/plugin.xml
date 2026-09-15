@@ -2704,6 +2704,12 @@
 		</property>
 	</bean>
 
+	<bean id="LlmEvalModule" class="org.entermediadb.ai.llm.router.LlmEvalModule" scope="prototype">
+		<property name="moduleManager">
+			<ref bean="moduleManager" />
+		</property>
+	</bean>
+
 	<bean id="searchingSkill" class="org.entermediadb.ai.skills.SearchingSkill" scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
