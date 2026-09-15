@@ -2600,6 +2600,18 @@
 		</property>
 	</bean>
 
+	<bean id="anthropicConnection" class="org.entermediadb.ai.llm.anthropic.AnthropicConnection" scope="prototype">
+		<property name="moduleManager">
+			<ref bean="moduleManager" />
+		</property>
+		<property name="requestUtils">
+			<ref bean="requestUtils" />
+		</property>
+		<property name="pageManager">
+			<ref bean="pageManager" />
+		</property>
+	</bean>
+
 	<bean id="llamaVisionConnection" class="org.entermediadb.ai.llm.llama.LlamaVisionConnection" scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
@@ -2687,6 +2699,12 @@
 	</bean>
 
 	<bean id="assistantManager" class="org.entermediadb.ai.assistant.AssistantManager" scope="prototype">
+		<property name="moduleManager">
+			<ref bean="moduleManager" />
+		</property>
+	</bean>
+
+	<bean id="LlmEvalModule" class="org.entermediadb.ai.llm.router.LlmEvalModule" scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
