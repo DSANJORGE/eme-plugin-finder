@@ -1,6 +1,6 @@
 # LLM provider routing and failover — design
 
-Date: 2026-09-15. Repos: `plugins/finder` (code, tests, eval harness), `plugins/catalog` (fields, lists, admin views). Intended for an upstream PR to EnterMedia.
+Date: 2026-09-15. Repos: `plugins/finder` (code, tests, eval harness), `plugins/catalog` (fields, lists, events), `plugins/mediadb` (eval endpoint, judge template). Intended for an upstream PR to EnterMedia. Amended 2026-09-15 while planning: see "Deviations" at the end.
 
 ## Goal
 
@@ -33,7 +33,7 @@ id = function/template name (`chat_tutor_usercomment`). Fields: `aiservers` (ord
 
 ### `aicalllog` (new)
 
-One row per attempt: `functionname`, `aiserver`, `modelname`, `ms`, `promptokens`, `completiontokens`, `status` (`ok`, `error`, `timeout`, `breakeropen`, `breakerclosed`, `misconfigured`), `httpstatus`, `errormessage` (no keys, ≤500 chars), `attempt`, `user`, `datecreated`. Daily cleanup event deletes rows older than 30 days.
+One row per attempt: `functionname`, `aiserver`, `modelname`, `ms`, `promptokens`, `completiontokens`, `status` (`ok`, `error`, `timeout`, `breakeropen`, `breakerclosed`, `misconfigured`), `httpstatus`, `errormessage` (no keys, ≤500 chars), `attempt`, `datecreated`. Daily cleanup event deletes rows older than 30 days.
 
 Per-client configuration is free: every table is per catalog.
 
@@ -41,13 +41,13 @@ Per-client configuration is free: every table is per catalog.
 
 ### Entry points
 
-`MediaArchive.getLlmConnection(type)` keeps its signature and returns a `RoutedLlmConnection` built from the enabled rows of that type. The router resolves the `airoute` row lazily from the function name passed to `callStructure`, `callClassifyFunction`, `callToolsFunction` and `callJson`. No caller changes. Cache key stays the type in the `llmconnection` cache; the router holds the row list and rebuilds when the cache is cleared (admin edits already clear it).
+`MediaArchive.getLlmConnection(type)` keeps its signature and returns a `RoutedLlmConnection` built from the enabled rows of that type. The router resolves the `airoute` row lazily from the function name passed to `callStructure`, `callClassifyFunction`, `callToolsFunction` and `callJson`. No caller changes. Cache key stays the type in the `llmconnection` cache; the router holds the row list and is rebuilt when older than 60 s (nothing clears the cache on admin edits).
 
 ### `RoutedLlmConnection implements LlmConnection`
 
 Holds one delegate bean per `aiserver` row (from `connectionbean`), each with its own `HttpSharedConnection` whose socket timeout is the row's `timeoutseconds`. Call loop:
 
-1. Resolve chain: `airoute` row if present, else enabled type rows by `ordering`. Admin-only request header `X-AiServer: <id>` moves that row to the front.
+1. Resolve chain: `airoute` row if present, else enabled type rows by `ordering`.
 2. Skip rows with an open breaker unless the window expired (one probe allowed).
 3. Skip rows with a blank key when the type needs one; log `misconfigured`, not a breaker failure.
 4. Call the delegate. Success: reset failure count, log `ok`, return.
@@ -86,14 +86,14 @@ Admin list view for `aicalllog` under the AI settings menu: filter by function, 
 ### A/B override
 
 - Reorder `aiservers` on the `airoute` row in the admin UI; effective on next call.
-- `X-AiServer` header for admin users only; used by curl and the eval script, never by the app.
+- The eval endpoint's `aiserver` parameter (admin only) calls one named row with no failover; used by curl and the eval script, never by the app.
 
 ### Eval harness
 
 Generic runner in `plugins/finder/tools/llmeval/`; per-product golden sets elsewhere (TestU: `plugins/testu/tools/llmeval/`).
 
 - `golden.jsonl`: ~30 prompts with `function`, `input` (the fields the skill fills: learner prompt, question, options, explanation, reference excerpts), `expected` (must-cite, must-not-say, language, max words).
-- `run.sh <server> <aiserver-id...>`: for each prompt × server, POST to admin-only `services/ai/evalcall.json` with `X-AiServer`; endpoint renders the template and calls that one row with no failover. Records ms, tokens, reply, log id to `results/<date>-<aiserver>.jsonl`. `--dry-run` renders only.
+- `run.sh <golden.jsonl> <aiserver-id...>`: for each prompt × server, POST to admin-only `services/llm/evalcall.json` with `aiserver=<id>`; endpoint renders the template and calls that one row with no failover. Records ms, tokens, reply, log id to `results/<date>-<aiserver>.jsonl`. `--dry-run` renders only.
 - `judge.sh`: deterministic checks (JSON parses, word cap, language, cites present, forbidden phrases), then an LLM judge under function `llm_eval_judge` (its `airoute` row points at the Anthropic row, model `claude-opus-5`) scoring correctness, groundedness, tone 1–5 with a one-line reason.
 - `report.sh`: Markdown table per run: pass rate, median and p95 ms, mean judge score, cost from tokens × `prices.json`.
 
@@ -113,7 +113,7 @@ Local runs hit dev Tomcat as admin/admin. Live runs use a dedicated eval admin a
 
 ### Tests (JUnit in `plugins/finder`, no live providers)
 
-- Router with fake delegates: primary ok; primary timeout → second ok; breaker trips after N; half-open probe; misconfigured skipped; chain-exhausted message; `X-AiServer` reorder.
+- Router with fake delegates: primary ok; primary timeout → second ok; breaker trips after N; half-open probe; misconfigured skipped; chain-exhausted message.
 - `anthropicConnection` request translation against a fixture of the tutor template; `openaiConnection` key stripping.
 - Eval `--dry-run` renders every golden prompt.
 
@@ -130,4 +130,13 @@ Production plugin origins point at entermedia-community, so our fork never runs 
 
 ### Upstream PR
 
-One PR per repo (finder, catalog), branch `llm-routing`: data model, router, adapters, admin views, eval harness, tests, `baseaiserver.xml` example rows with blank keys. Excluded: TestU golden set, any `airoute` rows, keys. PR text explains the config model and links an eval report.
+One PR per repo (finder, catalog, mediadb), branch `llm-routing`: data model, router, adapters, admin views, eval harness, tests, `baseaiserver.xml` example rows with blank keys. Excluded: TestU golden set, any `airoute` rows, keys. PR text explains the config model and links an eval report.
+
+## Deviations settled during planning (2026-09-15)
+
+- No `X-AiServer` header: the tutor's LLM call runs on the `monitorchats` event thread, so a request header cannot reach the router. A/B for real traffic is the `airoute` row; single-server calls use the eval endpoint's `aiserver` parameter.
+- Eval endpoint path is `services/llm/evalcall.json` in the mediadb plugin (`services/ai/` is a virtual directory owned by `JsonDataModule.handleAiFunction`), so mediadb is the third repo in the PR.
+- `aicalllog` has no `user` column (no request user on the event thread).
+- `AnthropicConnection.getLlmProtocol()` returns `openai` so the existing `ai/openai` → `ai/default` template fallback applies; no new template directory.
+- Router instances are rebuilt after 60 s instead of on cache clears.
+- Admin views: `airoute` and `aicalllog` use the generic admin data manager; no bespoke list view.
