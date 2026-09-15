@@ -63,20 +63,31 @@ public class BaseLlmConnection implements LlmConnection
 	public static final int DEFAULT_TIMEOUT_SECONDS = 30;
 	public static final int MAX_TIMEOUT_SECONDS = 1200;
 
-	protected Integer fieldTimeoutOverride;
+	// ThreadLocal: a routed connection's delegate is shared across concurrent calls, so a
+	// per-instance field would let one thread's override leak into another thread's request.
+	// The HTTP call happens on the same thread that set the override, so this is enough.
+	protected ThreadLocal<Integer> fieldTimeoutOverride = new ThreadLocal<Integer>();
 
 	public void setTimeoutOverride(Integer inSeconds)
 	{
-		fieldTimeoutOverride = inSeconds;
+		if (inSeconds == null)
+		{
+			fieldTimeoutOverride.remove();
+		}
+		else
+		{
+			fieldTimeoutOverride.set(inSeconds);
+		}
 	}
 
 	/** Route override, else the aiserver row's timeoutseconds, else 30; never above 1200. */
 	public int getTimeoutSeconds()
 	{
 		int seconds = DEFAULT_TIMEOUT_SECONDS;
-		if (fieldTimeoutOverride != null)
+		Integer override = fieldTimeoutOverride.get();
+		if (override != null)
 		{
-			seconds = fieldTimeoutOverride;
+			seconds = override;
 		}
 		else if (getAiServerData() != null)
 		{

@@ -4,7 +4,6 @@ import java.net.SocketTimeoutException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -63,7 +62,7 @@ public class RoutedLlmConnection implements LlmConnection
 	protected String fieldServerType;
 	protected List<Data> fieldServers;
 	protected DelegateFactory fieldFactory;
-	protected Map<String, LlmConnection> fieldDelegates = new HashMap<String, LlmConnection>();
+	protected Map<String, LlmConnection> fieldDelegates = new ConcurrentHashMap<String, LlmConnection>();
 	protected long fieldCreated = System.currentTimeMillis();
 
 	public RoutedLlmConnection(MediaArchive inArchive, String inServerType, List<Data> inServers, DelegateFactory inFactory)
@@ -165,13 +164,7 @@ public class RoutedLlmConnection implements LlmConnection
 
 	protected LlmConnection delegate(Data inServer)
 	{
-		LlmConnection connection = fieldDelegates.get(inServer.getId());
-		if (connection == null)
-		{
-			connection = fieldFactory.create(inServer);
-			fieldDelegates.put(inServer.getId(), connection);
-		}
-		return connection;
+		return fieldDelegates.computeIfAbsent(inServer.getId(), id -> fieldFactory.create(inServer));
 	}
 
 	protected LlmConnection primary()
@@ -209,13 +202,7 @@ public class RoutedLlmConnection implements LlmConnection
 	protected Breaker breaker(Data inServer)
 	{
 		String key = catalogId() + "/" + inServer.getId();
-		Breaker b = BREAKERS.get(key);
-		if (b == null)
-		{
-			b = new Breaker();
-			BREAKERS.put(key, b);
-		}
-		return b;
+		return BREAKERS.computeIfAbsent(key, k -> new Breaker());
 	}
 
 	// ---- the loop ----
@@ -237,6 +224,7 @@ public class RoutedLlmConnection implements LlmConnection
 			int failuresAllowed = intValue(server, "breakerfailures", DEFAULT_BREAKER_FAILURES);
 			long openMs = intValue(server, "breakerminutes", DEFAULT_BREAKER_MINUTES) * 60000L;
 			boolean wasOpen;
+			boolean skipBreakerOpen = false;
 			synchronized (b)
 			{
 				wasOpen = b.failures >= failuresAllowed;
@@ -245,12 +233,19 @@ public class RoutedLlmConnection implements LlmConnection
 					boolean windowOver = System.currentTimeMillis() - b.openedAt >= openMs;
 					if (!windowOver || b.probing)
 					{
-						tried.add(server.getId() + "(breaker open)");
-						logAttempt(server, inFunction, "breakeropen", 0, attempt, null, null);
-						continue;
+						skipBreakerOpen = true;
 					}
-					b.probing = true; // exactly one half-open probe
+					else
+					{
+						b.probing = true; // exactly one half-open probe
+					}
 				}
+			}
+			if (skipBreakerOpen)
+			{
+				tried.add(server.getId() + "(breaker open)");
+				logAttempt(server, inFunction, "breakeropen", 0, attempt, null, null);
+				continue;
 			}
 
 			if (needsKey(server))
@@ -268,14 +263,15 @@ public class RoutedLlmConnection implements LlmConnection
 				}
 			}
 
-			LlmConnection connection = delegate(server);
-			if (connection instanceof BaseLlmConnection)
-			{
-				((BaseLlmConnection) connection).setTimeoutOverride(timeoutOverride);
-			}
 			long start = System.currentTimeMillis();
+			LlmConnection connection = null;
 			try
 			{
+				connection = delegate(server);
+				if (connection instanceof BaseLlmConnection)
+				{
+					((BaseLlmConnection) connection).setTimeoutOverride(timeoutOverride);
+				}
 				LlmResponse response = inCall.call(connection);
 				String problem = inspect(response, inChatShaped);
 				if (problem != null)
@@ -311,6 +307,19 @@ public class RoutedLlmConnection implements LlmConnection
 				tried.add(server.getId() + "(" + status + " " + ms + "ms)");
 				log.error(inFunction + " failed on aiserver " + server.getId() + ": " + message);
 				logAttempt(server, inFunction, status, ms, attempt, message, null);
+			}
+			finally
+			{
+				// Belt-and-braces: every exit path above already clears these on its own line,
+				// but a throw from delegate() itself (factory failure) would skip both without this.
+				if (connection instanceof BaseLlmConnection)
+				{
+					((BaseLlmConnection) connection).setTimeoutOverride(null);
+				}
+				synchronized (b)
+				{
+					b.probing = false;
+				}
 			}
 		}
 		throw new OpenEditException("No AI server answered " + inFunction + "; tried " + String.join(", ", tried));
@@ -370,6 +379,36 @@ public class RoutedLlmConnection implements LlmConnection
 		return false;
 	}
 
+	/** Pure row-filling logic, split out of logAttempt so it can be unit-tested without a Searcher. */
+	protected void fillLogRow(Data inRow, Data inServer, String inFunction, String inStatus, long inMs, int inAttempt, String inError, LlmResponse inResponse)
+	{
+		inRow.setValue("functionname", inFunction == null ? fieldServerType : inFunction);
+		inRow.setValue("aiserver", inServer.getId());
+		inRow.setValue("modelname", inServer.get("modelname"));
+		inRow.setValue("status", inStatus);
+		inRow.setValue("ms", inMs);
+		inRow.setValue("attempt", inAttempt);
+		inRow.setValue("datecreated", new Date());
+		if (inError != null)
+		{
+			inRow.setValue("errormessage", inError.length() > 500 ? inError.substring(0, 500) : inError);
+			Integer http = httpStatusOf(inError);
+			if (http != null)
+			{
+				inRow.setValue("httpstatus", http);
+			}
+		}
+		if (inResponse != null && inResponse.getRawResponse() != null)
+		{
+			JSONObject usage = (JSONObject) inResponse.getRawResponse().get("usage");
+			if (usage != null)
+			{
+				inRow.setValue("promptokens", usage.get("prompt_tokens"));
+				inRow.setValue("completiontokens", usage.get("completion_tokens"));
+			}
+		}
+	}
+
 	/** One aicalllog row. Never throws; never contains a key. */
 	protected void logAttempt(Data inServer, String inFunction, String inStatus, long inMs, int inAttempt, String inError, LlmResponse inResponse)
 	{
@@ -381,31 +420,7 @@ public class RoutedLlmConnection implements LlmConnection
 		{
 			Searcher searcher = fieldMediaArchive.getSearcher("aicalllog");
 			Data row = searcher.createNewData();
-			row.setValue("functionname", inFunction == null ? fieldServerType : inFunction);
-			row.setValue("aiserver", inServer.getId());
-			row.setValue("modelname", inServer.get("modelname"));
-			row.setValue("status", inStatus);
-			row.setValue("ms", inMs);
-			row.setValue("attempt", inAttempt);
-			row.setValue("datecreated", new Date());
-			if (inError != null)
-			{
-				row.setValue("errormessage", inError.length() > 500 ? inError.substring(0, 500) : inError);
-				Integer http = httpStatusOf(inError);
-				if (http != null)
-				{
-					row.setValue("httpstatus", http);
-				}
-			}
-			if (inResponse != null && inResponse.getRawResponse() != null)
-			{
-				JSONObject usage = (JSONObject) inResponse.getRawResponse().get("usage");
-				if (usage != null)
-				{
-					row.setValue("promptokens", usage.get("prompt_tokens"));
-					row.setValue("completiontokens", usage.get("completion_tokens"));
-				}
-			}
+			fillLogRow(row, inServer, inFunction, inStatus, inMs, inAttempt, inError, inResponse);
 			searcher.saveData(row, null);
 		}
 		catch (Throwable ex)
