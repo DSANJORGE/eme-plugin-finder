@@ -91,6 +91,7 @@ public class RoutedLlmConnectionTest extends TestCase
 	protected void setUp()
 	{
 		RoutedLlmConnection.BREAKERS.clear();
+		RoutedLlmConnection.DELEGATES.clear();
 		serverA = server("a", "2", "5");
 		serverB = server("b", "3", "5");
 	}
@@ -193,9 +194,36 @@ public class RoutedLlmConnectionTest extends TestCase
 		catch (OpenEditException ex)
 		{
 			assertTrue(ex.getMessage(), ex.getMessage().startsWith("No AI server answered chat_tutor_usercomment"));
-			assertTrue(ex.getMessage(), ex.getMessage().contains("a(error"));
-			assertTrue(ex.getMessage(), ex.getMessage().contains("b(timeout"));
+			assertTrue(ex.getMessage(), ex.getMessage().contains("a(error 429 "));
+			assertTrue(ex.getMessage(), ex.getMessage().contains("b(timeout "));
+			assertTrue(ex.getMessage(), ex.getMessage().endsWith("; last error: Read timed out"));
 		}
+	}
+
+	public void testDelegatesAreCachedAcrossRoutersAndSeeRowEdits()
+	{
+		final List<String> created = new ArrayList<String>();
+		RoutedLlmConnection.DelegateFactory counting = new RoutedLlmConnection.DelegateFactory()
+		{
+			public org.entermediadb.ai.llm.LlmConnection create(Data inServer)
+			{
+				created.add(inServer.getId());
+				return new Fake();
+			}
+		};
+
+		RoutedLlmConnection one = new RoutedLlmConnection(null, "thinking", Arrays.asList(serverA), counting);
+		org.entermediadb.ai.llm.LlmConnection first = one.delegate(serverA);
+		assertEquals(Arrays.asList("a"), created);
+
+		Data edited = server("a", "2", "5");
+		edited.setValue("modelname", "gpt-edited");
+		RoutedLlmConnection two = new RoutedLlmConnection(null, "thinking", Arrays.asList(edited), counting);
+		org.entermediadb.ai.llm.LlmConnection second = two.delegate(edited);
+
+		assertSame(first, second);
+		assertEquals(Arrays.asList("a"), created); // factory called once per server, not once per router
+		assertEquals("gpt-edited", second.getAiServerData().get("modelname"));
 	}
 
 	public void testNoServersThrowsMisconfigured()
@@ -248,7 +276,7 @@ public class RoutedLlmConnectionTest extends TestCase
 		assertNotNull(row.getValue("datecreated"));
 		assertEquals(500, row.get("errormessage").length());
 		assertEquals(Integer.valueOf(503), row.getValue("httpstatus"));
-		assertEquals(Long.valueOf(10L), row.getValue("promptokens"));
+		assertEquals(Long.valueOf(10L), row.getValue("prompttokens"));
 		assertEquals(Long.valueOf(20L), row.getValue("completiontokens"));
 	}
 

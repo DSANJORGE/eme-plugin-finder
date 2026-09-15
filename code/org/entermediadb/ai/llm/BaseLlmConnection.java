@@ -536,11 +536,15 @@ public class BaseLlmConnection implements LlmConnection
 
 		inMethod.setHeader("x-customerkey", customerkey); // standard eMedia header
 
-		for (Iterator iterator = getSharedHeaders().keySet().iterator(); iterator.hasNext();)
+		Map<String, String> shared = getSharedHeaders();
+		for (Iterator iterator = shared.keySet().iterator(); iterator.hasNext();)
 		{
 			String key = (String) iterator.next();
-			String value = inHeaders.get(key);
-			inMethod.setHeader(key, value);
+			String value = shared.get(key);
+			if (value != null)
+			{
+				inMethod.setHeader(key, value);
+			}
 		}
 
 		if (inHeaders != null)
@@ -549,7 +553,10 @@ public class BaseLlmConnection implements LlmConnection
 			{
 				String key = (String) iterator.next();
 				String value = inHeaders.get(key);
-				inMethod.setHeader(key, value);
+				if (value != null)
+				{
+					inMethod.setHeader(key, value);
+				}
 			}
 		}
 	}

@@ -7,7 +7,7 @@ J=$(mktemp); trap 'rm -f "$J"' EXIT
 curl -sf -c "$J" -o /dev/null "$B/services/authentication/login.json" -H 'Content-Type: application/json' -d "{\"id\":\"admin\",\"password\":\"${EME_ADMIN_PW:-admin}\"}"
 OUT="${R%.jsonl}.judged.jsonl"
 python3 - "$R" "$JUDGE" "$B" "$J" > "$OUT" <<'PY'
-import json, re, sys, urllib.request, urllib.parse
+import json, os, re, sys, urllib.request, urllib.parse
 path, judge, base, jar = sys.argv[1:5]
 cookie = '; '.join(f"{p[5]}={p[6]}" for p in (l.rstrip('\n').split('\t') for l in open(jar)) if len(p) == 7)
 def checks(reply, exp):
@@ -30,7 +30,9 @@ for line in open(path):
     d['reply'] = reply
     d['checks'] = checks(reply, d.get('expected', {})) if d.get('ok') else ['no_reply']
     if d.get('ok'):
-        form = {'function': 'llm_eval_judge', 'aiserver': judge, 'input': json.dumps({'question': d['question'], 'reference': d['reference'], 'reply': reply})}
+        judgeinput = {'question': d.get('question', ''), 'reference': d.get('reference', ''), 'reply': reply,
+                      'rubric': d.get('rubric') or os.environ.get('JUDGE_RUBRIC', '')}
+        form = {'function': 'llm_eval_judge', 'aiserver': judge, 'input': json.dumps(judgeinput)}
         req = urllib.request.Request(f"{base}/services/llm/evalcall.json", data=urllib.parse.urlencode(form).encode(), headers={'Cookie': cookie})
         try:
             j = json.load(urllib.request.urlopen(req, timeout=300)).get('payload') or {}

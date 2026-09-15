@@ -86,12 +86,32 @@ public class AnthropicConnection extends OpenAiConnection
 		JSONObject out = new JSONObject();
 		out.put("model", inOpenAi.get("model"));
 		Object maxTokens = inOpenAi.get("max_tokens");
+		if (maxTokens == null)
+		{
+			maxTokens = inOpenAi.get("max_completion_tokens");
+		}
 		out.put("max_tokens", maxTokens == null ? DEFAULT_MAX_TOKENS : maxTokens);
-		for (String key : new String[] { "temperature", "top_p", "top_k", "stop_sequences", "thinking", "metadata" })
+		// temperature/top_p/top_k are deliberately not forwarded: current Claude models answer
+		// HTTP 400 when they are sent. An admin who needs them can add them back in extraparams.
+		for (String key : new String[] { "stop_sequences", "thinking", "metadata" })
 		{
 			if (inOpenAi.get(key) != null)
 			{
 				out.put(key, inOpenAi.get(key));
+			}
+		}
+		Object stop = inOpenAi.get("stop");
+		if (stop != null && out.get("stop_sequences") == null)
+		{
+			if (stop instanceof JSONArray)
+			{
+				out.put("stop_sequences", stop);
+			}
+			else
+			{
+				JSONArray sequences = new JSONArray();
+				sequences.add(stop);
+				out.put("stop_sequences", sequences);
 			}
 		}
 
@@ -122,6 +142,14 @@ public class AnthropicConnection extends OpenAiConnection
 		if (system.length() > 0)
 		{
 			out.put("system", system.toString());
+		}
+		if (messages.isEmpty())
+		{
+			// Anthropic rejects an empty messages array; a system-only template still deserves an answer.
+			JSONObject placeholder = new JSONObject();
+			placeholder.put("role", "user");
+			placeholder.put("content", "(no input)");
+			messages.add(placeholder);
 		}
 		out.put("messages", messages);
 

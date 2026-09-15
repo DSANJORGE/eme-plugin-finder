@@ -15,14 +15,14 @@ public class AnthropicConnectionTest extends TestCase
 
 	public void testTranslatesTutorShapedRequest()
 	{
-		JSONObject in = parse("{\"model\":\"claude-opus-5\",\"messages\":[{\"role\":\"system\",\"content\":\"You are Iris.\"},{\"role\":\"user\",\"content\":\"Hola\"}],\"temperature\":0.3,\"max_tokens\":400,\"response_format\":{\"type\":\"json_schema\",\"json_schema\":{\"name\":\"tutor_reply\",\"strict\":true,\"schema\":{\"type\":\"object\",\"properties\":{\"message\":{\"type\":\"string\"}},\"required\":[\"message\"],\"additionalProperties\":false}}}}");
+		JSONObject in = parse("{\"model\":\"claude-opus-5\",\"messages\":[{\"role\":\"system\",\"content\":\"You are a helpful assistant.\"},{\"role\":\"user\",\"content\":\"Hola\"}],\"temperature\":0.3,\"max_tokens\":400,\"response_format\":{\"type\":\"json_schema\",\"json_schema\":{\"name\":\"tutor_reply\",\"strict\":true,\"schema\":{\"type\":\"object\",\"properties\":{\"message\":{\"type\":\"string\"}},\"required\":[\"message\"],\"additionalProperties\":false}}}}");
 
 		JSONObject out = AnthropicConnection.toAnthropicRequest(in);
 
 		assertEquals("claude-opus-5", out.get("model"));
-		assertEquals("You are Iris.", out.get("system"));
+		assertEquals("You are a helpful assistant.", out.get("system"));
 		assertEquals(400L, out.get("max_tokens"));
-		assertEquals(0.3, out.get("temperature"));
+		assertFalse(out.containsKey("temperature"));
 		JSONArray messages = (JSONArray) out.get("messages");
 		assertEquals(1, messages.size());
 		assertEquals("user", ((JSONObject) messages.get(0)).get("role"));
@@ -45,6 +45,43 @@ public class AnthropicConnectionTest extends TestCase
 		assertNotNull(tool.get("input_schema"));
 		assertEquals("tool", ((JSONObject) out.get("tool_choice")).get("type"));
 		assertEquals("pick", ((JSONObject) out.get("tool_choice")).get("name"));
+	}
+
+	public void testSamplingParamsAreDropped()
+	{
+		// Current Claude models answer 400 when these are sent; admins can re-add them via extraparams.
+		JSONObject in = parse("{\"model\":\"m\",\"messages\":[{\"role\":\"user\",\"content\":\"x\"}],\"temperature\":0.3,\"top_p\":0.9,\"top_k\":40}");
+
+		JSONObject out = AnthropicConnection.toAnthropicRequest(in);
+
+		assertFalse(out.containsKey("temperature"));
+		assertFalse(out.containsKey("top_p"));
+		assertFalse(out.containsKey("top_k"));
+	}
+
+	public void testStopAndMaxCompletionTokensAreMapped()
+	{
+		JSONObject in = parse("{\"model\":\"m\",\"messages\":[{\"role\":\"user\",\"content\":\"x\"}],\"stop\":\"END\",\"max_completion_tokens\":222}");
+
+		JSONObject out = AnthropicConnection.toAnthropicRequest(in);
+
+		assertEquals(222L, out.get("max_tokens"));
+		assertFalse(out.containsKey("stop"));
+		JSONArray stops = (JSONArray) out.get("stop_sequences");
+		assertEquals(1, stops.size());
+		assertEquals("END", stops.get(0));
+	}
+
+	public void testSystemOnlyRequestGetsAUserMessage()
+	{
+		JSONObject in = parse("{\"model\":\"m\",\"messages\":[{\"role\":\"system\",\"content\":\"only a system prompt\"}]}");
+
+		JSONObject out = AnthropicConnection.toAnthropicRequest(in);
+
+		JSONArray messages = (JSONArray) out.get("messages");
+		assertEquals(1, messages.size());
+		assertEquals("user", ((JSONObject) messages.get(0)).get("role"));
+		assertEquals("(no input)", ((JSONObject) messages.get(0)).get("content"));
 	}
 
 	public void testImagePartsTranslate()

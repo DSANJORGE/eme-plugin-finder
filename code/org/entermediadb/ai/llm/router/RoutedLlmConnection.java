@@ -54,6 +54,11 @@ public class RoutedLlmConnection implements LlmConnection
 	// ponytail: JVM-local breaker state keyed catalogid/aiserverid; a Tomcat restart resets it.
 	protected static final Map<String, Breaker> BREAKERS = new ConcurrentHashMap<String, Breaker>();
 
+	// Delegates outlive the router: the 60 s rebuild in MediaArchive.getLlmConnection would otherwise
+	// leak one HttpSharedConnection (and its idle-connection evictor thread) per minute per server.
+	// Keyed catalogid/aiserverid/connectionbean so a row that switches bean gets a fresh delegate.
+	protected static final Map<String, LlmConnection> DELEGATES = new ConcurrentHashMap<String, LlmConnection>();
+
 	public static final int DEFAULT_BREAKER_FAILURES = 3;
 	public static final int DEFAULT_BREAKER_MINUTES = 5;
 	private static final Pattern HTTP_STATUS = Pattern.compile("\\bHTTP (\\d{3})\\b");
@@ -62,7 +67,6 @@ public class RoutedLlmConnection implements LlmConnection
 	protected String fieldServerType;
 	protected List<Data> fieldServers;
 	protected DelegateFactory fieldFactory;
-	protected Map<String, LlmConnection> fieldDelegates = new ConcurrentHashMap<String, LlmConnection>();
 	protected long fieldCreated = System.currentTimeMillis();
 
 	public RoutedLlmConnection(MediaArchive inArchive, String inServerType, List<Data> inServers, DelegateFactory inFactory)
@@ -165,7 +169,19 @@ public class RoutedLlmConnection implements LlmConnection
 
 	protected LlmConnection delegate(Data inServer)
 	{
-		return fieldDelegates.computeIfAbsent(inServer.getId(), id -> fieldFactory.create(inServer));
+		String key = catalogId() + "/" + inServer.getId() + "/" + inServer.get("connectionbean");
+		LlmConnection delegate = DELEGATES.get(key);
+		if (delegate == null)
+		{
+			delegate = fieldFactory.create(inServer);
+			LlmConnection raced = DELEGATES.putIfAbsent(key, delegate);
+			if (raced != null)
+			{
+				delegate = raced;
+			}
+		}
+		delegate.setAiServerData(inServer); // an edited row (key, model, timeout) takes effect without a new bean
+		return delegate;
 	}
 
 	protected LlmConnection primary()
@@ -218,6 +234,7 @@ public class RoutedLlmConnection implements LlmConnection
 		}
 		Integer timeoutOverride = routeTimeout(inFunction);
 		List<String> tried = new ArrayList<String>();
+		String lasterror = null;
 		int attempt = 0;
 		for (Data server : chain)
 		{
@@ -260,6 +277,7 @@ public class RoutedLlmConnection implements LlmConnection
 						b.probing = false;
 					}
 					tried.add(server.getId() + "(no key)");
+					lasterror = "blank serverapikey";
 					logAttempt(server, inFunction, "misconfigured", 0, attempt, "blank serverapikey", null);
 					continue;
 				}
@@ -292,7 +310,7 @@ public class RoutedLlmConnection implements LlmConnection
 				logAttempt(server, inFunction, "ok", System.currentTimeMillis() - start, attempt, null, response);
 				return response;
 			}
-			catch (Throwable ex)
+			catch (Exception ex)
 			{
 				long ms = System.currentTimeMillis() - start;
 				String status = isTimeout(ex) ? "timeout" : "error";
@@ -306,7 +324,9 @@ public class RoutedLlmConnection implements LlmConnection
 					}
 				}
 				String message = ex.getMessage() == null ? ex.getClass().getSimpleName() : ex.getMessage();
-				tried.add(server.getId() + "(" + status + " " + ms + "ms)");
+				Integer http = httpStatusOf(message);
+				lasterror = message;
+				tried.add(server.getId() + "(" + status + (http == null ? "" : " " + http) + " " + ms + "ms)");
 				log.error(inFunction + " failed on aiserver " + server.getId() + ": " + message);
 				logAttempt(server, inFunction, status, ms, attempt, message, null);
 			}
@@ -324,7 +344,12 @@ public class RoutedLlmConnection implements LlmConnection
 				}
 			}
 		}
-		throw new OpenEditException("No AI server answered " + inFunction + "; tried " + String.join(", ", tried));
+		String problem = "No AI server answered " + inFunction + "; tried " + String.join(", ", tried);
+		if (lasterror != null)
+		{
+			problem = problem + "; last error: " + (lasterror.length() > 500 ? lasterror.substring(0, 500) : lasterror);
+		}
+		throw new OpenEditException(problem);
 	}
 
 	/** Null when the reply is usable; otherwise the reason it counts as a failed attempt. */
@@ -405,7 +430,7 @@ public class RoutedLlmConnection implements LlmConnection
 			JSONObject usage = (JSONObject) inResponse.getRawResponse().get("usage");
 			if (usage != null)
 			{
-				inRow.setValue("promptokens", usage.get("prompt_tokens"));
+				inRow.setValue("prompttokens", usage.get("prompt_tokens"));
 				inRow.setValue("completiontokens", usage.get("completion_tokens"));
 			}
 		}

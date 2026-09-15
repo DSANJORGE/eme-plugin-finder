@@ -27,7 +27,9 @@ for line in open(golden):
         d = json.load(urllib.request.urlopen(req, timeout=600))
     except Exception as ex:
         d = {'ok': False, 'error': str(ex), 'ms': None}
-    d.update(id=g['id'], expected=g.get('expected', {}), question=g['input'].get('learnerprompt', ''), reference=g['input'].get('referenceexcerpts', ''))
+    # question/reference/rubric are optional top-level golden keys; they are what the judge grades against.
+    d.update(id=g['id'], expected=g.get('expected', {}), question=g.get('question') or g['input'].get('query', ''),
+             reference=g.get('reference', ''), rubric=g.get('rubric', ''))
     print(json.dumps(d, ensure_ascii=False)); sys.stdout.flush()
 PY
   echo "wrote $OUT ($(wc -l < "$OUT") rows)"

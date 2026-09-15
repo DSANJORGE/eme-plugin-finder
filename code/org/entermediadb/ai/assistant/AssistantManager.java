@@ -803,24 +803,26 @@ public class AssistantManager extends BaseAiManager implements SkillStatusListen
 				try
 				{
 					JSONObject got = connection.getJson(address);
-					if (got != null)
+					String ok = got == null ? null : (String) got.get("status");
+					if ("ok".equals(ok))
 					{
-						String ok = (String) got.get("status");
-						if ("ok".equals(ok))
-						{
-							long end = System.currentTimeMillis();
-							Integer diff = Math.round(end - start);
-							inLog.info(address + " ok run in " + diff + " milliseconds");
-							speeds.put(serverroot, diff);
-							RoutedLlmConnection.closeBreaker(getMediaArchive().getCatalogId(), server.getId());
-						}
+						long end = System.currentTimeMillis();
+						Integer diff = Math.round(end - start);
+						inLog.info(address + " ok run in " + diff + " milliseconds");
+						speeds.put(serverroot, diff);
+						RoutedLlmConnection.closeBreaker(getMediaArchive().getCatalogId(), server.getId());
+					}
+					else
+					{
+						// A 200 that does not say "ok" is still a sick server: mark it down, leave the breaker alone.
+						inLog.info(address + " answered without an ok status: " + ok);
+						speeds.put(serverroot, -1);
 					}
 				}
 				catch (Exception ex)
 				{
 					inLog.info(address + " had error " + ex);
-					speeds.put(serverroot, -1); // Push back
-					// Ignore
+					speeds.put(serverroot, -1);
 				}
 			}
 		}

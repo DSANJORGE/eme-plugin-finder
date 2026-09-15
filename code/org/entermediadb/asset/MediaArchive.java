@@ -3426,6 +3426,12 @@ public class MediaArchive implements CatalogEnabled
 					servers.add(server);
 				}
 			}
+			if ("embedding".equals(inServerType) && servers.size() > 1)
+			{
+				// Vectors from two different models are not comparable, so an embedding type chain never
+				// fails over: keep the first row only. An airoute row can still name a different server.
+				servers = new ArrayList<Data>(servers.subList(0, 1));
+			}
 			if (servers.isEmpty())
 			{
 				Data localhost = getCachedData("aiserver", "localhost");

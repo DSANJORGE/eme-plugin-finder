@@ -190,7 +190,7 @@ Insert before the closing `</properties>`:
   <property id="httpstatus" editable="false" index="true" type="number" stored="true">
     <name><language id="en"><![CDATA[HTTP status]]></language></name>
   </property>
-  <property id="promptokens" editable="false" index="true" type="number" stored="true">
+  <property id="prompttokens" editable="false" index="true" type="number" stored="true">
     <name><language id="en"><![CDATA[Prompt tokens]]></language></name>
   </property>
   <property id="completiontokens" editable="false" index="true" type="number" stored="true">
@@ -1676,7 +1676,7 @@ public class RoutedLlmConnection implements LlmConnection
 				JSONObject usage = (JSONObject) inResponse.getRawResponse().get("usage");
 				if (usage != null)
 				{
-					row.setValue("promptokens", usage.get("prompt_tokens"));
+					row.setValue("prompttokens", usage.get("prompt_tokens"));
 					row.setValue("completiontokens", usage.get("completion_tokens"));
 				}
 			}

@@ -15,7 +15,9 @@ import org.entermediadb.asset.MediaArchive;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.openedit.CatalogEnabled;
+import org.openedit.Data;
 import org.openedit.OpenEditException;
+import org.openedit.data.BaseData;
 import org.openedit.page.Page;
 import org.openedit.util.JSONParser;
 import org.openedit.util.OutputFiller;
@@ -50,7 +52,7 @@ public class OpenAiConnection extends BaseLlmConnection implements CatalogEnable
 	{
 		MediaArchive archive = getMediaArchive();
 		inContext.put("model", getModelName());
-		inContext.addContext("aiserver", getAiServerData());
+		inContext.addContext("aiserver", keylessAiServerData());
 
 		if (inContext.getContextValue("jsonfilename") != null)
 		{
@@ -72,6 +74,21 @@ public class OpenAiConnection extends BaseLlmConnection implements CatalogEnable
 		String definition = loadInputFromTemplate(inContext, templatepath);
 		JSONObject payload = (JSONObject) new JSONParser().parse(definition);
 		return prepareRequest(payload);
+	}
+
+	/** The aiserver row as templates may see it: same values, minus the API key. */
+	protected Data keylessAiServerData()
+	{
+		Data server = getAiServerData();
+		if (server == null)
+		{
+			return null;
+		}
+		BaseData copy = new BaseData();
+		copy.setId(server.getId());
+		copy.setProperties(server.getProperties());
+		copy.getProperties().remove("serverapikey");
+		return copy;
 	}
 
 	/** One chat/completions round trip. Non-200 raises with the status and the first 500 chars of the body. */

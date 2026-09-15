@@ -3,5 +3,5 @@
   "groq": {"input": 0.59, "output": 0.79},
   "openrouter": {"input": 0.60, "output": 3.00},
   "together": {"input": 0.88, "output": 0.88},
-  "anthropic": {"input": 15.0, "output": 75.0}
+  "anthropic": {"input": 5.00, "output": 25.00}
 }

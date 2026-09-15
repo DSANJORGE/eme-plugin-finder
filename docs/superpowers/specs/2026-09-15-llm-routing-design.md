@@ -33,7 +33,7 @@ id = function/template name (`chat_tutor_usercomment`). Fields: `aiservers` (ord
 
 ### `aicalllog` (new)
 
-One row per attempt: `functionname`, `aiserver`, `modelname`, `ms`, `promptokens`, `completiontokens`, `status` (`ok`, `error`, `timeout`, `breakeropen`, `breakerclosed`, `misconfigured`), `httpstatus`, `errormessage` (no keys, ≤500 chars), `attempt`, `datecreated`. Daily cleanup event deletes rows older than 30 days.
+One row per attempt: `functionname`, `aiserver`, `modelname`, `ms`, `prompttokens`, `completiontokens`, `status` (`ok`, `error`, `timeout`, `breakeropen`, `breakerclosed`, `misconfigured`), `httpstatus`, `errormessage` (no keys, ≤500 chars), `attempt`, `datecreated`. Daily cleanup event deletes rows older than 30 days.
 
 Per-client configuration is free: every table is per catalog.
 
@@ -107,7 +107,7 @@ Local runs hit dev Tomcat as admin/admin. Live runs use a dedicated eval admin a
 - Missing config (blank key, no enabled rows) → `misconfigured` log or exception "no enabled aiserver of type X"; never a breaker failure.
 - Unparsable reply in schema mode → fail over; if the last row fails, the exception carries the raw text truncated to 500 chars.
 - `aicalllog` writes are try/catch; failure logs to Tomcat, never blocks an answer.
-- Keys never appear in logs, exceptions, or the admin list (masked).
+- Keys never appear in logs or exceptions; keys are stored as plain text like every other eMe credential field; masking is out of scope.
 
 ## 6. Testing, rollout, upstream PR
 
