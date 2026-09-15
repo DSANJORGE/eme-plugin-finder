@@ -81,6 +81,7 @@ public class OpenAiConnection extends BaseLlmConnection implements CatalogEnable
 		HttpPost method = new HttpPost(getServerRoot() + "/chat/completions");
 		method.addHeader("Authorization", "Bearer " + getApiKey());
 		method.setHeader("Content-Type", "application/json");
+		applyLlmHeaders(method, getSharedHeaders());
 		method.setEntity(new StringEntity(inPayload.toJSONString(), StandardCharsets.UTF_8));
 
 		CloseableHttpResponse resp = execute(method);

@@ -121,8 +121,16 @@ public class BaseLlmConnection implements LlmConnection
 		{
 			return inPayload;
 		}
-		JSONObject more = new JSONParser().parse(extra);
-		inPayload.putAll(more);
+		// Misconfiguration must not kill the call: bad or non-object extraparams is logged and ignored.
+		try
+		{
+			JSONObject more = new JSONParser().parse(extra);
+			inPayload.putAll(more);
+		}
+		catch (Exception ex)
+		{
+			log.error("Ignoring invalid extraparams on aiserver " + getAiServerData().getId());
+		}
 		return inPayload;
 	}
 
@@ -502,6 +510,35 @@ public class BaseLlmConnection implements LlmConnection
 
 	}
 
+	/** Same non-auth headers callJson applies to every eMe-to-LLM request: x-customerkey (falls back to "demo") plus any shared/extra headers. */
+	protected void applyLlmHeaders(HttpRequestBase inMethod, Map<String, String> inHeaders)
+	{
+		String customerkey = getMediaArchive().getCatalogSettingValue("catalog-storageid");
+		if (customerkey == null)
+		{
+			customerkey = "demo";
+		}
+
+		inMethod.setHeader("x-customerkey", customerkey); // standard eMedia header
+
+		for (Iterator iterator = getSharedHeaders().keySet().iterator(); iterator.hasNext();)
+		{
+			String key = (String) iterator.next();
+			String value = inHeaders.get(key);
+			inMethod.setHeader(key, value);
+		}
+
+		if (inHeaders != null)
+		{
+			for (Iterator iterator = inHeaders.keySet().iterator(); iterator.hasNext();)
+			{
+				String key = (String) iterator.next();
+				String value = inHeaders.get(key);
+				inMethod.setHeader(key, value);
+			}
+		}
+	}
+
 	@Override
 	public LlmResponse callJson(String inPath, Map<String, String> inHeaders, JSONObject inPayload)
 	{
@@ -521,30 +558,7 @@ public class BaseLlmConnection implements LlmConnection
 		method.addHeader("Authorization", "Bearer " + getApiKey());
 		method.setHeader("Content-Type", "application/json");
 
-		String customerkey = getMediaArchive().getCatalogSettingValue("catalog-storageid");
-		if (customerkey == null)
-		{
-			customerkey = "demo";
-		}
-
-		method.setHeader("x-customerkey", customerkey); // standard eMedia header
-
-		for (Iterator iterator = getSharedHeaders().keySet().iterator(); iterator.hasNext();)
-		{
-			String key = (String) iterator.next();
-			String value = inHeaders.get(key);
-			method.setHeader(key, value);
-		}
-
-		if (inHeaders != null)
-		{
-			for (Iterator iterator = inHeaders.keySet().iterator(); iterator.hasNext();)
-			{
-				String key = (String) iterator.next();
-				String value = inHeaders.get(key);
-				method.setHeader(key, value);
-			}
-		}
+		applyLlmHeaders(method, inHeaders);
 
 		if (method instanceof HttpPost)
 		{

@@ -55,6 +55,15 @@ public class OpenAiConnectionPrepareTest extends TestCase
 		assertEquals("m", c.prepareRequest(payload()).get("model"));
 	}
 
+	public void testInvalidExtraParamsIsIgnored()
+	{
+		OpenAiConnection c = new OpenAiConnection();
+		BaseData server = new BaseData();
+		server.setValue("extraparams", "{not json");
+		c.setAiServerData(server);
+		assertEquals("m", c.prepareRequest(payload()).get("model"));
+	}
+
 	public void testTimeoutDefaultRowAndOverride()
 	{
 		OpenAiConnection c = new OpenAiConnection();
