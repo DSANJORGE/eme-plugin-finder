@@ -4,6 +4,7 @@ import org.entermediadb.ai.AgentContext;
 import org.entermediadb.ai.llm.BaseAgentContext;
 import org.entermediadb.ai.llm.LlmConnection;
 import org.entermediadb.ai.llm.LlmResponse;
+import org.entermediadb.ai.llm.openai.OpenAiConnection;
 import org.entermediadb.asset.MediaArchive;
 import org.entermediadb.asset.modules.BaseMediaModule;
 import org.json.simple.JSONObject;
@@ -37,6 +38,11 @@ public class LlmEvalModule extends BaseMediaModule
 			fail(inReq, 400, "unknown aiserver " + serverid);
 			return;
 		}
+		if (Boolean.parseBoolean(server.get("disabled")))
+		{
+			fail(inReq, 400, "aiserver " + serverid + " is disabled");
+			return;
+		}
 
 		AgentContext context = new BaseAgentContext();
 		context.setCatalogId(archive.getCatalogId());
@@ -45,15 +51,32 @@ public class LlmEvalModule extends BaseMediaModule
 		String input = inReq.getRequestParameter("input");
 		if (input != null && !input.trim().isEmpty())
 		{
-			JSONObject values = new JSONParser().parse(input);
-			for (Object key : values.keySet())
+			try
 			{
-				context.putContextValue((String) key, values.get(key));
+				JSONObject values = new JSONParser().parse(input);
+				for (Object key : values.keySet())
+				{
+					context.putContextValue((String) key, values.get(key));
+				}
+			}
+			catch (Throwable ex)
+			{
+				fail(inReq, 400, "bad input json: " + ex.getMessage());
+				return;
 			}
 		}
 
-		LlmConnection connection = (LlmConnection) archive.getModuleManager().getBean(archive.getCatalogId(), server.get("connectionbean"), false);
-		connection.setAiServerData(server);
+		LlmConnection connection;
+		try
+		{
+			connection = (LlmConnection) archive.getModuleManager().getBean(archive.getCatalogId(), server.get("connectionbean"), false);
+			connection.setAiServerData(server);
+		}
+		catch (Throwable ex)
+		{
+			fail(inReq, 500, "could not load connection: " + ex.getMessage());
+			return;
+		}
 
 		JSONObject out = new JSONObject();
 		out.put("aiserver", serverid);
@@ -62,11 +85,27 @@ public class LlmEvalModule extends BaseMediaModule
 
 		if ("true".equals(inReq.getRequestParameter("dryrun")))
 		{
-			context.put("model", server.get("modelname"));
-			String path = "/" + archive.getMediaDbId() + "/ai/" + connection.getLlmProtocol() + "/calls/" + function + ".json";
-			out.put("ok", Boolean.TRUE);
-			out.put("rendered", connection.loadInputFromTemplate(context, path));
-			reply(inReq, out);
+			try
+			{
+				context.put("model", server.get("modelname"));
+				String rendered;
+				if (connection instanceof OpenAiConnection)
+				{
+					rendered = ((OpenAiConnection) connection).loadCallPayload(context, function).toJSONString();
+				}
+				else
+				{
+					String path = "/" + archive.getMediaDbId() + "/ai/" + connection.getLlmProtocol() + "/calls/" + function + ".json";
+					rendered = connection.loadInputFromTemplate(context, path);
+				}
+				out.put("ok", Boolean.TRUE);
+				out.put("rendered", rendered);
+				reply(inReq, out);
+			}
+			catch (Throwable ex)
+			{
+				fail(inReq, 400, ex.getMessage());
+			}
 			return;
 		}
 

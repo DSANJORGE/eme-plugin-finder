@@ -46,7 +46,7 @@ public class OpenAiConnection extends BaseLlmConnection implements CatalogEnable
 	}
 
 	/** Renders /{mediadb}/ai/{protocol}/calls/{function}.json (catalog fallback) and prepares it. */
-	protected JSONObject loadCallPayload(AgentContext inContext, String inFunction)
+	public JSONObject loadCallPayload(AgentContext inContext, String inFunction)
 	{
 		MediaArchive archive = getMediaArchive();
 		inContext.put("model", getModelName());
