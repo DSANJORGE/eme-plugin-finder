@@ -1,10 +1,7 @@
 package org.entermediadb.ai.skills;
 
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import org.apache.commons.logging.Log;
@@ -149,7 +146,10 @@ public class AdaptiveTutorialUserCommentSkill extends AdaptiveTutorialBaseSkill
 			// A session follow-up ("¿Por qué las otras opciones están mal?") has no keywords of its own: the
 			// question's text and its correct option find the pages the learner's words cannot.
 			String questiontext = question == null ? null : question.get("question") + " " + question.get("option_" + String.valueOf(question.get("correctoption")).toLowerCase());
-			tutorMessageContext.putContextValue("referenceexcerpts", viewed + findReferenceExcerpts(tutorialid, usermessage, questiontext));
+			long started = System.currentTimeMillis();
+			String excerpts = findReferenceExcerpts(tutorialid, usermessage, questiontext);
+			log.info("Tutor excerpts: " + excerpts.length() + " chars in " + (System.currentTimeMillis() - started) + " ms");
+			tutorMessageContext.putContextValue("referenceexcerpts", viewed + excerpts);
 			if (question != null)
 			{
 				StringBuilder qb = new StringBuilder("Current question: ").append(question.get("question")).append("\n");
@@ -186,7 +186,9 @@ public class AdaptiveTutorialUserCommentSkill extends AdaptiveTutorialBaseSkill
 			tutorMessageContext.putContextValue("chathistory", chatHistory);
 			tutorMessageContext.putContextValue("learnerprompt", prompt);
 			LlmConnection thinking = getMediaArchive().getLlmConnection("thinking");
+			started = System.currentTimeMillis();
 			LlmResponse response = thinking.callStructure(tutorMessageContext, "chat_tutor_usercomment");
+			log.info("Tutor LLM call: " + (System.currentTimeMillis() - started) + " ms");
 			JSONObject structured = response.getResponsePayload();
 			String message = structured == null ? null : (String) structured.get("message");
 			if (message == null)
@@ -605,36 +607,12 @@ public class AdaptiveTutorialUserCommentSkill extends AdaptiveTutorialBaseSkill
 	}
 
 	/**
-	 * Pages of the tutorial's documents matching the queries, tried in order: every word of a query first
-	 * (the learner's words, then the question's), any word of a query last. "" when nothing matches.
+	 * Up to 3 pages of the tutorial's documents most relevant to the queries (the learner's words first,
+	 * then the question's). "" when nothing matches.
 	 */
 	protected String findReferenceExcerpts(String tutorialid, String... queries)
 	{
 		if (tutorialid == null)
-		{
-			return "";
-		}
-		// ponytail: plain keyword match on the page text; the embedding server does the
-		// real semantic retrieval when its /chat works. Words of 4+ letters only,
-		// punctuation stripped: "?" and "*" are wildcards to the search engine, so
-		// "¿Qué son los derechos humanos?" matched nothing (2026-09-04).
-		List<String> termsets = new ArrayList<String>();
-		for (String query : queries)
-		{
-			StringBuilder terms = new StringBuilder();
-			for (String word : query == null ? new String[0] : query.split("[^\\p{L}\\p{N}]+"))
-			{
-				if (word.length() >= 4)
-				{
-					terms.append(terms.length() > 0 ? " " : "").append(word);
-				}
-			}
-			if (terms.length() > 0)
-			{
-				termsets.add(terms.toString());
-			}
-		}
-		if (termsets.isEmpty())
 		{
 			return "";
 		}
@@ -643,29 +621,44 @@ public class AdaptiveTutorialUserCommentSkill extends AdaptiveTutorialBaseSkill
 		{
 			return "";
 		}
-		// markdowncontent is not_analyzed (one keyword per page), so a word search there never
-		// matched and every reply had no excerpts. description is analyzed and holds the page
-		// text. All words first; any word when no page has them all.
-		// ponytail: wildcard OR is unranked; the embed server's semantic /chat replaces this.
-		Collection<Data> pages = Collections.emptyList();
-		for (String terms : termsets)
+		// ponytail: ranked keyword match on the page text; the embedding server does the
+		// real semantic retrieval when its /chat works. markdowncontent is not_analyzed (one
+		// keyword per page): search description, which holds the page text. match = one analyzed
+		// OR query ranked by relevance (accents folded, stemmed). freeform split words on ASCII
+		// letters ("Política" -> "Pol" "tica") and made its last word mandatory even in "a OR b"
+		// form, so an applied question ending in a word no page had ("...por el agua?") found
+		// nothing and the tutor refused (2026-09-16). Each query separately, so the question's
+		// words cannot drown the learner's: the best 2 pages of every query but the last, which
+		// fills up to 3.
+		Map<String, Data> pages = new LinkedHashMap<String, Data>();
+		for (int i = 0; i < queries.length && pages.size() < 3; i++)
 		{
-			pages = getMediaArchive().query("entityassetpage").orgroup("entityasset", docs).freeform("description", terms).hitsPerPage(3).search().getPageOfHits();
-			if (!pages.isEmpty())
+			StringBuilder terms = new StringBuilder();
+			// Words of 4+ letters only, punctuation stripped: "?" and "*" are wildcards to the
+			// search engine, so "¿Qué son los derechos humanos?" matched nothing (2026-09-04).
+			for (String word : queries[i] == null ? new String[0] : queries[i].split("[^\\p{L}\\p{N}]+"))
 			{
-				break;
+				if (word.length() >= 4)
+				{
+					terms.append(' ').append(word);
+				}
 			}
-		}
-		for (String terms : termsets)
-		{
-			if (!pages.isEmpty())
+			if (terms.length() == 0)
 			{
-				break;
+				continue;
 			}
-			pages = getMediaArchive().query("entityassetpage").orgroup("entityasset", docs).freeform("description", terms.replace(" ", " OR ")).hitsPerPage(3).search().getPageOfHits();
+			int limit = i < queries.length - 1 ? pages.size() + 2 : 3;
+			for (Object hit : getMediaArchive().query("entityassetpage").orgroup("entityasset", docs).match("description", terms.toString().trim()).hitsPerPage(3).search().getPageOfHits())
+			{
+				Data page = (Data) hit;
+				if (pages.size() < limit)
+				{
+					pages.putIfAbsent(page.getId(), page);
+				}
+			}
 		}
 		StringBuilder out = new StringBuilder();
-		for (Data page : pages)
+		for (Data page : pages.values())
 		{
 			String text = page.get("markdowncontent");
 			if (text == null || text.isEmpty())
