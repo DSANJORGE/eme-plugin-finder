@@ -76,6 +76,15 @@ public class AdaptiveTutorialAnswerSkill extends AdaptiveTutorialBaseSkill
 			selectedoption = stored.get("selectedoption");
 			confidence = stored.get("answerconfidence");
 			iscorrect = "true".equals(String.valueOf(stored.getValue("iscorrect")));
+			if ("evaluation".equals(stored.get("mode")))
+			{
+				// Evaluation Mode is procedural-only (TestU spec 2026-09-16-evaluation-mode): no verdict, explanation, hint or source during an attempt.
+				LlmResponse procedural = new BasicLlmResponse();
+				procedural.setMessage("Respuesta registrada. Verás tu resultado al terminar la evaluación.");
+				tutorMessageContext.setLastResponse(procedural);
+				tutorMessageContext.putContextValue("messagerendertype", "answereval");
+				return;
+			}
 			if (stored.get("channel") == null)
 			{
 				stored.setValue("channel", channelid);
