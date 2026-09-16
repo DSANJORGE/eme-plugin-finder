@@ -83,6 +83,7 @@ public class AdaptiveTutorialAnswerSkill extends AdaptiveTutorialBaseSkill
 				procedural.setMessage("Respuesta registrada. Verás tu resultado al terminar la evaluación.");
 				tutorMessageContext.setLastResponse(procedural);
 				tutorMessageContext.putContextValue("messagerendertype", "answereval");
+				tutorMessageContext.fireStatusComplete(tutorMessageContext.getCurrentAutomationStep());
 				return;
 			}
 			if (stored.get("channel") == null)
