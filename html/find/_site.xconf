@@ -48,7 +48,7 @@
   <path-action name="PageValue.loadPageVariable" allowduplicates="true" bean="inflector"/>
 
 
-  <property name="themeid">theme</property>
+  <property name="themeid">defaulttheme</property>
   <path-action name="ThemeModule.loadCurrentTheme" />
 
   <property name="errorpage">/${applicationid}/theme/layouts/errorpage.html</property>

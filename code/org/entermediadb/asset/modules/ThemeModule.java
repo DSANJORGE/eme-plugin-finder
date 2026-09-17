@@ -65,7 +65,7 @@ public class ThemeModule extends BaseMediaModule
 			Page page = getPageManager().getPage(inputfile);
 
 			WebPageRequest req = getRequestUtils().createPageRequest(page, inReq.getRequest(), inReq.getResponse(), inReq.getUser(), (URLUtilities) inReq.getPageValue(PageRequestKeys.URL_UTILITIES));
-			String outputfile = "/" + appid + "/" + theme.getId() + "/custom.css";
+			String outputfile = "/" + appid + "/theme/" + theme.getId() + "/custom.css";
 			ContentItem outputcContentItem = getPageManager().getContent(outputfile);
 			// getPageManager().putPage(outputpage);
 			// loadTheme(req);

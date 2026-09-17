@@ -1,0 +1,126 @@
+/*Color*/
+
+:root {
+	--themed-logo-width: 188px;
+	--themed-logo-height: 80px;
+
+	--themed-sidebar:#151515;
+	--themed-sidebar-text:#FFFFFF;
+
+	--themed-navbar-primary:#252525;
+	--themed-navbar-primary-text:#F5F5F5;
+	--themed-navbar-primary-text-hover:#ffffff;
+
+	--themed-navbar-secondary:#444444;
+	--themed-navbar-secondary-text:#FFFFFF;
+
+	--themed-nav-btn:linear-gradient(45deg, #444444 40%, #6A6A6A 100%);
+	--themed-nav-btn-hover:linear-gradient(45deg, #5E5E5E 50%, #848484 100%);
+	--themed-nav-btn-text:#FFFFFF;
+
+	--themed-nav-btn-active:#FFFFFF;
+	--themed-nav-btn-active-hover:#E6E6E6;
+	--themed-nav-btn-active-text:#444444;
+
+	--themed-tab-bar:#444444;
+	--themed-tab-bar-hover:#5E5E5E;
+
+	--themed-tab-btn:#444444;
+	--themed-tab-btn-text:#FFFFFF;
+	--themed-tab-btn-hover:#5E5E5E;
+	--themed-tab-btn-hover-text:#EEEEEE;
+
+	--themed-tab-btn-active:#EFEFEF;
+	--themed-tab-btn-active-text:#444444;
+	--themed-tab-btn-active-hover:#D6D6D6;
+
+	--themed-btn-cta-plain:#94E594;
+	--themed-btn-cta:linear-gradient(45deg, #94E594 40%, #D2F4D2 100%);
+	--themed-btn-cta-hover:linear-gradient(45deg, #BDEFBD 50%, #FBFEFB 100%);
+	--themed-btn-cta-text:#0F3E0F;
+
+	--themed-btn:linear-gradient(45deg, #444444 40%, #6A6A6A 100%);
+	--themed-btn-hover:linear-gradient(45deg, #5E5E5E 50%, #848484 100%);
+	--themed-btn-text:#FFFFFF;
+
+	--themed-btn-sec:linear-gradient(45deg, #DFDFDF 40%, #B9B9B9 100%);
+	--themed-btn-sec-hover:linear-gradient(45deg, #F7F7F7 50%, #D1D1D1 100%);
+	--themed-btn-sec-text:#444444;
+
+	--themed-btn-acc-active:linear-gradient(45deg, #378637 40%, #52B852 100%);
+	--themed-btn-acc-active-text:#FFFFFF;
+
+	--themed-btn-acc:linear-gradient(45deg, #3884FD 40%, #84B3FE 100%);
+	--themed-btn-acc-hover:linear-gradient(45deg, #6DA4FE 50%, #B9D3FF 100%);
+	--themed-btn-acc-text:#FFFFFF;
+
+	--themed-th:#FFFFFF;
+	--themed-th-hover:#E6E6E6;
+	--themed-th-text:#444444;
+
+	--themed-td:#FFFFFF;
+	--themed-td-stripe:#F2F2F2;
+	--themed-td-text:#444444;
+	
+	--themed-footer:#151515;
+	--themed-footer-text:#888888;
+}
+
+#embody {
+
+
+}
+
+#header {
+
+}
+
+
+
+#header .header-text{
+position: relative;
+
+}
+
+
+
+.entityNavBarContainer {
+	
+		
+;
+}
+
+@media (max-width: 768px) {
+	.navbar-quicksearch {
+			
+			
+		
+		
+	}
+	
+}
+
+/*EMNav Tabs*/
+.emnav .navtabs .navtabitem,
+#header .navbar-toggler  {
+		box-shadow: 2px 2px 4px 0px rgba(0, 0, 0, .1);
+	
+}
+
+
+/*emnav Tabs Hover*/
+.emnav .navtabitem:hover {
+	
+	
+}
+
+
+
+
+
+
+
+
+
+.search-list li.current a.search-href, .sidebar-list li.current a {
+}
