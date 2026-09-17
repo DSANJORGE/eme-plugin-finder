@@ -9,9 +9,7 @@ import org.entermediadb.ai.TutorMessageContext;
 import org.entermediadb.ai.automation.RunningScenario;
 import org.entermediadb.ai.llm.AutomationStep;
 import org.entermediadb.ai.llm.BasicLlmResponse;
-import org.entermediadb.ai.llm.LlmConnection;
 import org.entermediadb.ai.llm.LlmResponse;
-import org.json.simple.JSONObject;
 import org.openedit.Data;
 import org.openedit.data.Searcher;
 
@@ -134,15 +132,13 @@ public class AdaptiveTutorialAnswerSkill extends AdaptiveTutorialBaseSkill
 		tutorMessageContext.putContextValue("confidence", confidence);
 		tutorMessageContext.putContextValue("selectedoption", selectedoption);
 
-		LlmConnection llmconnection = getMediaArchive().getLlmConnection("thinking");
-		LlmResponse response = llmconnection.callStructure(tutorMessageContext, "chat_tutor_feedback");
-
-		JSONObject feedback = response.getResponsePayload();
-		String feedbackText = (String) feedback.get("message");
-		if (feedbackText == null)
+		// TestU: the app shows the question's own rationale as the verdict and ignores this reply
+		// (testu_session.dart), so no LLM call: chat_tutor_feedback cost ~3 s of llamat per answer
+		// and evicted the tutor's cached prompt prefix before every follow-up (2026-09-15).
+		String feedbackText = question.get("rationale");
+		if (feedbackText == null || feedbackText.isEmpty())
 		{
-			tutorMessageContext.error("No feedback " + feedbackText);
-			return;
+			feedbackText = iscorrect ? "Correcto." : "No exactamente.";
 		}
 
 		LlmResponse llmResponse = new BasicLlmResponse();
