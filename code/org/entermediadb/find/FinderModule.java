@@ -687,7 +687,6 @@ public class FinderModule extends BaseMediaModule
 			if (cat != null)
 			{
 				cat.setValue("viewusers", data.getValues("viewusers"));
-				cat.setValue("viewroles", data.getValues("viewroles"));
 				cat.setValue("viewgroups", data.getValues("viewgroups"));
 				cat.setValue("securityenabled", data.getValue("securityenabled"));
 				archive.saveData("category", cat);

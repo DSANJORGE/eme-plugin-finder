@@ -332,7 +332,7 @@ public class AssetSecurityDataArchive implements AssetSecurityArchive
 						return true;
 					}
 					if (cat != null && (cat.collectValues("viewuser") != null && cat.collectValues("viewuser").contains(inUser.getUserName())
-						|| cat.collectValues("viewrole") != null && cat.collectValues("viewrole").contains(inProfile.getSettingsGroup().getId())))
+						|| cat.collectValues("viewrole") != null && cat.collectValues("viewrole").contains(inProfile.getSettingsRole().getId())))
 					{
 						return true;
 
@@ -369,8 +369,8 @@ public class AssetSecurityDataArchive implements AssetSecurityArchive
 		 * 
 		 * if( values != null && inType.equals("view") && inProfile != null ) { Searcher searcher =
 		 * getSearcherManager().getSearcher(inArchive.getCatalogId(), "libraryroles"); if(
-		 * inProfile.getSettingsGroup() != null ) { SearchQuery query =
-		 * searcher.createSearchQuery().append("roleid", inProfile.getSettingsGroup().getId());
+		 * inProfile.getSettingsRole() != null ) { SearchQuery query =
+		 * searcher.createSearchQuery().append("roleid", inProfile.getSettingsRole().getId());
 		 * query.addOrsGroup("libraryid", values); Data found = searcher.searchByQuery(query); if( found !=
 		 * null ) { return Boolean.TRUE; } if( inUser != null ) { //Search for all the libraries defined
 		 * then check groups searcher = getSearcherManager().getSearcher(inArchive.getCatalogId(),
@@ -385,7 +385,7 @@ public class AssetSecurityDataArchive implements AssetSecurityArchive
 		 * searcher.createSearchQuery().append("userid",inUser.getId()); query.addOrsGroup("_parent",
 		 * values); found = searcher.searchByQuery(query); if( found != null ) { return Boolean.TRUE; } }
 		 * else if( log.isDebugEnabled() ) { log.debug("No user found and profile has no libraries " +
-		 * inProfile.getSettingsGroup().getId() ); } } } if( log.isDebugEnabled() ) {
+		 * inProfile.getSettingsRole().getId() ); } } } if( log.isDebugEnabled() ) {
 		 * log.debug("No rights for " + inType + " on " + inProfile ); }
 		 */
 	}

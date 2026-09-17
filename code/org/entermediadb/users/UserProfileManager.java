@@ -140,7 +140,7 @@ public class UserProfileManager
 			userprofile = loadUserProfile(mediaArchive, appid, inUserName);
 			PermissionManager manager = (PermissionManager) mediaArchive.getBean("permissionManager");
 			// EntityPermissions permissions =
-			// manager.loadEntityPermissions(userprofile.getSettingsGroup());
+			// manager.loadEntityPermissions(userprofile.getSettingsRole());
 			// userprofile.setEntityPermissions(permissions);
 
 			if (inReq != null)
@@ -172,7 +172,7 @@ public class UserProfileManager
 	protected boolean hasChanged(WebPageRequest inReq, MediaArchive mediaArchive, UserProfile userprofile)
 	{
 		String id = findDbSearcherIndex(mediaArchive);
-		if (id.equals(userprofile.getSettingsGroupIndexId()))
+		if (id.equals(userprofile.getSettingsRoleIndexId()))
 		{
 			return false;
 		}
@@ -184,7 +184,7 @@ public class UserProfileManager
 	 * loadModules(UserProfile inProfile) { //Must be set before we run actions below
 	 * inReq.putPageValue("userprofile", userprofile);
 	 * 
-	 * userprofile.setIndexId( mediaArchive.getSearcher("settingsgroup").getIndexId() );
+	 * userprofile.setIndexId( mediaArchive.getSearcher("settingsrole").getIndexId() );
 	 * 
 	 * log.info("Checking modules for " + inUserName + " catalog:" + inCatalogId); List<Data> okmodules
 	 * = new ArrayList<Data>(); if( inUserName != null && !inUserName.equals("anonymous")) { Collection
@@ -227,7 +227,7 @@ public class UserProfileManager
 		User user = getUserManager(inCatalogId).getUser(inUserName);
 		if (user != null && userprofile != null)
 		{
-			String role = userprofile.get("settingsgroup");
+			String role = userprofile.get("settingsrole");
 			if (role == null || "guest".equals(role))
 			{
 				log.info("Reset to defaultrole");
@@ -241,7 +241,7 @@ public class UserProfileManager
 			userprofile.setId(inUserName);
 			if (inUserName.equals("admin"))
 			{
-				userprofile.setProperty("settingsgroup", "administrator");
+				userprofile.setProperty("settingsrole", "administrator");
 			}
 			else
 				if (user != null && !"anonymous".equals(inUserName))
@@ -251,11 +251,11 @@ public class UserProfileManager
 					{
 						profiletype = "users";
 					}
-					userprofile.setProperty("settingsgroup", profiletype);
+					userprofile.setProperty("settingsrole", profiletype);
 				}
 				else
 				{
-					userprofile.setProperty("settingsgroup", "guest"); // Anonymmous
+					userprofile.setProperty("settingsrole", "guest"); // Anonymmous
 				}
 			userprofile.setSourcePath(inUserName);
 			userprofile.setCatalogId(inCatalogId);
@@ -270,39 +270,38 @@ public class UserProfileManager
 			}
 		}
 
-		String settingsgroupid = userprofile.get("settingsgroup");
-		if (settingsgroupid == null)
+		String settingsroleid = userprofile.get("settingsrole");
+		if (settingsroleid == null)
 		{
-			settingsgroupid = "guest";
+			settingsroleid = "guest";
 		}
-		Data fieldSettingsGroup = getSearcherManager().getCachedData(mediaArchive.getCatalogId(), "settingsgroup", settingsgroupid);
-		if (fieldSettingsGroup == null && log.isDebugEnabled())
+		Data fieldSettingsRole = getSearcherManager().getCachedData(mediaArchive.getCatalogId(), "settingsrole", settingsroleid);
+		if (fieldSettingsRole == null && log.isDebugEnabled())
 		{
 			log.debug("No settings group defined");
 		}
-		// if (fieldSettingsGroup != null)
+		// if (fieldSettingsRole != null)
 		// {
-		// Collection permissions = fieldSettingsGroup.getValues("permissions");
+		// Collection permissions = fieldSettingsRole.getValues("permissions");
 		// userprofile.getPermissions().setProfilePermissions(permissions);
 		// }
-		userprofile.setSettingsGroup(fieldSettingsGroup);
+		userprofile.setSettingsRole(fieldSettingsRole);
 		userprofile.setValue("userid", inUserName);
 		userprofile.setSourcePath(inUserName);
 		userprofile.setCatalogId(inCatalogId);
 
-		EntityPermissions permissions = (EntityPermissions) mediaArchive.getModuleManager().getBean(mediaArchive.getCatalogId(), "entityPermissions", false);
-		permissions.setEntityManager(mediaArchive.getEntityManager());
+		Permissions permissions = (Permissions) mediaArchive.getModuleManager().getBean(mediaArchive.getCatalogId(), "permissions", false);
 		permissions.setUserProfile(userprofile);
-		if (fieldSettingsGroup != null)
+		if (fieldSettingsRole != null)
 		{
-			Collection canpermissions = fieldSettingsGroup.getValues("permissions");
+	 		Collection canpermissions = fieldSettingsRole.getValues("permissions");
 			if (canpermissions != null)
 			{
 				permissions.setSystemRolePermissions(new HashSet(canpermissions));
 			}
 			else
 			{
-				log.error("No permissions found for settings group, corrupt DB " + settingsgroupid);
+				log.error("No permissions found for settings group, corrupt DB " + settingsroleid);
 				permissions.setSystemRolePermissions(new HashSet());
 			}
 		}
@@ -318,17 +317,12 @@ public class UserProfileManager
 					.or()
 					.match("securityenabled", "false")
 					.orgroup("viewgroups", user.getGroups())
-					.match("viewroles", userprofile.getSettingsGroup().getId())
 					.match("owner", inUserName)
 					.match("viewusers", inUserName)
 					.getQuery();
 				mainquery.addChildQuery(securityfilter);
 
 				HitTracker modules = msearcher.search(mainquery);
-				/*
-				 * orgroup("viewgroups", user.getGroups()). match("viewroles",
-				 * userprofile.getSettingsGroup().getId()). match("viewusers", inUserName)
-				 */
 
 				log.info(modules.size() + " for " + modules.getSearchQuery().toQuery());
 				userprofile.setModules(new ArrayList(modules));
@@ -337,10 +331,6 @@ public class UserProfileManager
 			else
 			{
 				QueryBuilder builder = mediaArchive.query("module").or().exact("securityenabled", false).orgroup("viewgroups", user.getGroups()).match("viewusers", inUserName).sort("name");
-				if (userprofile.getSettingsGroup() != null)
-				{
-					builder.match("viewroles", userprofile.getSettingsGroup().getId());
-				}
 				builder.sort("name");
 				HitTracker modules = builder.search();
 				// log.info(modules.size() + " for " + modules.getSearchQuery().toQuery());
@@ -377,14 +367,14 @@ public class UserProfileManager
 
 		String id = findDbSearcherIndex(mediaArchive);
 
-		userprofile.setSettingsGroupIndexId(id);
+		userprofile.setSettingsRoleIndexId(id);
 
 		return userprofile;
 	}
 
 	protected String findDbSearcherIndex(MediaArchive mediaArchive)
 	{
-		String index = mediaArchive.getSearcher("settingsgroup").getIndexId();
+		String index = mediaArchive.getSearcher("settingsrole").getIndexId();
 		String index2 = mediaArchive.getSearcher("permissionentityassigned").getIndexId();
 		String id = index + index2;
 		return id;
@@ -428,15 +418,6 @@ public class UserProfileManager
 				groupids.add(group.getId());
 			}
 		}
-		String roleid = null;
-		if (inUserprofile.getSettingsGroup() != null)
-		{
-			roleid = inUserprofile.getSettingsGroup().getId();
-		}
-		else
-		{
-			roleid = "anonymous";
-		}
 		// log.info("Searching categories");
 
 		if (groupids.isEmpty())
@@ -448,7 +429,6 @@ public class UserProfileManager
 			// match("securityenabled", "false"). ?
 			.match("ownerid", inUserprofile.getUserId())
 			.orgroup("viewgroups", groupids)
-			.exact("viewroles", roleid)
 			.exact("viewusers", inUserprofile.getUserId());
 
 		HitTracker categories = querybuilder.search();
@@ -502,7 +482,6 @@ public class UserProfileManager
 					Collection userentities = inMediaArchive.query(entity.getId())
 						.match("ownerid", inUserprofile.getUserId())
 						.orgroup("viewgroups", groupids)
-						.exact("viewroles", inRoleId)
 						.exact("viewusers", inUserprofile.getUserId())
 						.search();
 
@@ -599,7 +578,7 @@ public class UserProfileManager
 			userprofile.setProperty("userid", inRole);
 			userprofile.setId(inNewuser.getId());
 		}
-		userprofile.setProperty("settingsgroup", inRole);
+		userprofile.setProperty("settingsrole", inRole);
 		searcher.saveData(userprofile);
 		clearProfile(inCatalogId, inNewuser.getId());
 	}
@@ -614,7 +593,7 @@ public class UserProfileManager
 	public void clearProfiles(String inCatalogId)
 	{
 		MediaArchive mediaArchive = getMediaArchive(inCatalogId);
-		mediaArchive.getSearcher("settingsgroup").clearIndex();
+		mediaArchive.getSearcher("settingsrole").clearIndex();
 		mediaArchive.getSearcher("userprofile").clearIndex();
 		mediaArchive.clearCaches();
 

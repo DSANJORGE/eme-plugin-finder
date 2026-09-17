@@ -52,16 +52,6 @@ public class OrderSearchSecurity extends BaseSearchSecurity
 				groupids.add(group.getId());
 			}
 		}
-		String roleid = null;
-		if (inUserprofile != null && inUserprofile.getSettingsGroup() != null)
-		{
-			roleid = inUserprofile.getSettingsGroup().getId();
-		}
-		else
-		{
-			roleid = "anonymous";
-		}
-
 		String userid = inPageRequest.getUserName();
 
 		if (userid == null)
@@ -70,7 +60,7 @@ public class OrderSearchSecurity extends BaseSearchSecurity
 			userid = "null";
 		}
 
-		QueryBuilder builder = inSearcher.query().or().orgroup("viewgroups", groupids).exact("viewroles", roleid).exact("viewusers", userid).exact("userid", userid);
+		QueryBuilder builder = inSearcher.query().or().orgroup("viewgroups", groupids).exact("viewusers", userid).exact("userid", userid);
 		builder.exact("securityenabled", "false");
 		SearchQuery securityfilter = builder.getQuery();
 

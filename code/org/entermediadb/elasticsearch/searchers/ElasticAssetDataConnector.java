@@ -609,7 +609,6 @@ public class ElasticAssetDataConnector extends BaseElasticSearcher implements Da
 
 		Collection users = new HashSet(3);
 		Collection groups = new HashSet(3);
-		Collection roles = new HashSet(3);
 
 		if (detail == null)
 		{
@@ -652,7 +651,6 @@ public class ElasticAssetDataConnector extends BaseElasticSearcher implements Da
 
 				Collection u = cat.collectValues("viewerusers");
 				Collection g = cat.collectValues("viewergroups");
-				Collection r = cat.collectValues("viewerroles");
 				if (u != null)
 				{
 					users.addAll(u);
@@ -660,10 +658,6 @@ public class ElasticAssetDataConnector extends BaseElasticSearcher implements Da
 				if (g != null)
 				{
 					groups.addAll(g);
-				}
-				if (r != null)
-				{
-					roles.addAll(r);
 				}
 			}
 		}
@@ -676,11 +670,6 @@ public class ElasticAssetDataConnector extends BaseElasticSearcher implements Da
 		if (groups != null && !groups.isEmpty())
 		{
 			inContent.field("viewgroups", groups);
-			securityenabled = true;
-		}
-		if (roles != null && !roles.isEmpty())
-		{
-			inContent.field("viewroles", roles);
 			securityenabled = true;
 		}
 		inContent.field("securityenabled", securityenabled);

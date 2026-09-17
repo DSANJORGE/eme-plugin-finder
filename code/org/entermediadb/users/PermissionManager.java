@@ -70,12 +70,12 @@ public class PermissionManager implements CatalogEnabled
 		return getSearcherManager().getSearcher(getCatalogId(), inSearchType);
 	}
 
-	public Map loadEntitySettingsGroupPermissions(String inEntityId, String inSettingsGroupId)
+	public Map loadEntitySettingsGroupPermissions(String inEntityId, String inGroupId)
 	{
 
 		Map permissions = new HashMap();
 		Searcher searcher = getSearcher("permissionentityassigned");
-		HitTracker grouppermissions = searcher.query().exact("settingsgroup", inSettingsGroupId).exact("moduleid", inEntityId).exact("enabled", true).search();
+		HitTracker grouppermissions = searcher.query().exact("group", inGroupId).exact("moduleid", inEntityId).exact("enabled", true).search();
 
 		for (Iterator iterator = grouppermissions.iterator(); iterator.hasNext();)
 		{
@@ -99,7 +99,7 @@ public class PermissionManager implements CatalogEnabled
 			return;
 		}
 		boolean needsupdate = false;
-		String[] fieldsToCompare = {"users", "groups", "roles"};
+		String[] fieldsToCompare = {"users", "groups"};
 		for (String field : fieldsToCompare)
 		{
 			// Get values from both the root category and the module
@@ -201,7 +201,6 @@ public class PermissionManager implements CatalogEnabled
 
 		rootcat.setValue("customusers", inModule.getValue("viewusers"));
 		rootcat.setValue("customgroups", inModule.getValue("viewgroups"));
-		rootcat.setValue("customroles", inModule.getValue("viewroles"));
 
 		archive.saveData("category", rootcat);
 
@@ -413,8 +412,6 @@ public class PermissionManager implements CatalogEnabled
 		addGroups(alladded, empty, moregroups);
 
 		Collection<String> moreroles = category.collectValues("viewerroles");
-		more = category.collectValues("customroles");
-		moreroles.addAll(more);
 		addRoles(alladded, empty, moreroles);
 
 		return alladded;
@@ -450,7 +447,7 @@ public class PermissionManager implements CatalogEnabled
 		for (Iterator iterator = inEditorsfound.iterator(); iterator.hasNext();)
 		{
 			String id = (String) iterator.next();
-			Data data = getMediaArchive().getCachedData("settingsgroup", id);
+			Data data = getMediaArchive().getCachedData("settingsrole", id);
 			AddedPermission added = new AddedPermission();
 			added.setEditor(true);
 			added.setData(data);
@@ -460,7 +457,7 @@ public class PermissionManager implements CatalogEnabled
 		for (Iterator iterator = inViewersfound.iterator(); iterator.hasNext();)
 		{
 			String id = (String) iterator.next();
-			Data data = getMediaArchive().getCachedData("settingsgroup", id);
+			Data data = getMediaArchive().getCachedData("settingsrole", id);
 			AddedPermission added = new AddedPermission();
 			added.setEditor(false);
 			added.setData(data);

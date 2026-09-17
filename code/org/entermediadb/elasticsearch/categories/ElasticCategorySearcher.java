@@ -701,7 +701,6 @@ public class ElasticCategorySearcher extends BaseElasticSearcher implements Cate
 
 		Collection viewusers = cat.collectValues("viewerusers");
 		Collection viewgroups = cat.collectValues("viewergroups");
-		Collection viewroles = cat.collectValues("viewerroles");
 
 		if (cat.getValues("customusers") != null)
 		{
@@ -710,10 +709,6 @@ public class ElasticCategorySearcher extends BaseElasticSearcher implements Cate
 		if (cat.getValues("customgroups") != null)
 		{
 			viewgroups.addAll(cat.getValues("customgroups"));
-		}
-		if (cat.getValues("customroles") != null)
-		{
-			viewroles.addAll(cat.getValues("customroles"));
 		}
 
 		if (!viewusers.isEmpty())
@@ -724,12 +719,8 @@ public class ElasticCategorySearcher extends BaseElasticSearcher implements Cate
 		{
 			inContent.field("viewgroups", viewgroups);
 		}
-		if (!viewroles.isEmpty())
-		{
-			inContent.field("viewroles", viewroles);
-		}
 
-		if (!viewusers.isEmpty() || !viewgroups.isEmpty() || !viewroles.isEmpty())
+		if (!viewusers.isEmpty() || !viewgroups.isEmpty())
 		{
 			inContent.field("securityenabled", true);
 		}

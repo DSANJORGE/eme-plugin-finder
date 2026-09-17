@@ -141,17 +141,6 @@ public class CategoryWebTreeModel extends BaseTreeModel implements CatalogEnable
 			}
 		}
 
-		Collection roles = inCat.collectValues("viewroles");
-
-		if (roles != null && !roles.isEmpty())
-		{
-			hassecurity = true;
-			if (roles.contains(getUserProfile().getSettingsGroup().getId()))
-			{
-				return true;
-			}
-		}
-
 		Collection viewgroups = inCat.collectValues("viewgroups");
 
 		if (viewgroups != null && !viewgroups.isEmpty())

@@ -1247,7 +1247,7 @@ public class ProjectManager implements CatalogEnabled
 	 * public Collection listEditableCollections(WebPageRequest inReq) { Collection hits = null;
 	 * UserProfile profile = inReq.getUserProfile();
 	 * 
-	 * if (profile != null) { if ("administrator".equals(profile.get("settingsgroup"))) { hits =
+	 * if (profile != null) { if ("administrator".equals(profile.get("settingsrole"))) { hits =
 	 * getMediaArchive().query("librarycollection").all().search(); } else { hits = new ArrayList();
 	 * HitTracker filtered =
 	 * getMediaArchive().query("librarycollection").all().enduser(true).search(inReq ); int count = 0;

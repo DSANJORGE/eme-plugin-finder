@@ -465,7 +465,7 @@ public class WorkspaceManager
 
 	public void fixFiles(Page inFolder, String inOldCatalogId)
 	{
-		Page upload = getPageManager().getPage(inFolder.getPath() + "/WEB-INF/data/" + inOldCatalogId + "/lists/settingsgroup.xml");
+		Page upload = getPageManager().getPage(inFolder.getPath() + "/WEB-INF/data/" + inOldCatalogId + "/lists/settingsrole.xml");
 
 		XmlUtil util = new XmlUtil();
 		Element root = util.getXml(upload.getReader(), "utf-8");
@@ -513,7 +513,7 @@ public class WorkspaceManager
 			String version = root.attributeValue("version");
 			if (version == null || version.equals("8"))
 			{
-				// fix settingsgroups.xml
+				// fix settingsroles.xml
 				fixFiles(dest, oldcatalogid);
 			}
 

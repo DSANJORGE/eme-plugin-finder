@@ -162,7 +162,7 @@ public class EnterMediaCloudModule extends BaseJsonModule
 			{
 				userprofile = (UserProfile) profilesearcher.createNewData();
 				userprofile.setId(user.getId());
-				userprofile.setProperty("settingsgroup", "administrator"); // dependant on what what we get back from
+				userprofile.setProperty("settingsrole", "administrator"); // dependant on what what we get back from
 																			// our site. On Team?
 			}
 			userprofile.setValue("entermediacloudkey", userkey);

@@ -810,7 +810,7 @@ public class ProjectModule extends BaseMediaModule
 		ProjectManager manager = getProjectManager(inReq);
 		LibraryCollection collection = loadCollection(inReq);
 
-		if (inReq.getUserProfile().getSettingsGroup().getId().equals("administrator"))
+		if (inReq.getUserProfile().getSettingsRole().getId().equals("administrator"))
 		{
 			inReq.putPageValue("librarycol", collection);
 			return true;

@@ -3600,7 +3600,6 @@ public class BaseElasticSearcher extends BaseSearcher implements FullTextLoader
 
 		Collection combinedusers = new HashSet();
 		Collection combinedgroups = new HashSet();
-		Collection combinedroles = new HashSet();
 
 		boolean securityenabled = false;
 
@@ -3612,7 +3611,6 @@ public class BaseElasticSearcher extends BaseSearcher implements FullTextLoader
 		{
 			combinedusers = inData.getValues("viewusers");
 			combinedgroups = inData.getValues("viewgroups");
-			combinedroles = inData.getValues("viewroles");
 
 		}
 		else
@@ -3649,7 +3647,6 @@ public class BaseElasticSearcher extends BaseSearcher implements FullTextLoader
 						Collection moreusers = c.collectValues("viewerusers"); // These are already combined from
 																				// customusers
 						Collection moregroups = c.collectValues("viewergroups");
-						Collection moreroles = c.collectValues("viewerroles");
 
 						if (moreusers != null)
 						{
@@ -3658,10 +3655,6 @@ public class BaseElasticSearcher extends BaseSearcher implements FullTextLoader
 						if (moregroups != null)
 						{
 							combinedgroups.addAll(moregroups);
-						}
-						if (moreroles != null)
-						{
-							combinedroles.addAll(moreroles);
 						}
 
 					}
@@ -3677,11 +3670,6 @@ public class BaseElasticSearcher extends BaseSearcher implements FullTextLoader
 		if (combinedgroups != null && !combinedgroups.isEmpty())
 		{
 			inContent.field("viewgroups", combinedgroups);
-			securityenabled = true;
-		}
-		if (combinedroles != null && !combinedroles.isEmpty())
-		{
-			inContent.field("viewroles", combinedroles);
 			securityenabled = true;
 		}
 
@@ -3744,7 +3732,7 @@ public class BaseElasticSearcher extends BaseSearcher implements FullTextLoader
 	public boolean shoudSkipField(String inKey)
 	{
 		// skip description?
-		if ("_id".equals(inKey) || "_parent".equals(inKey) || "_all".equals(inKey) || inKey.contains(".") || inKey.contains("viewusers") || inKey.contains("viewgroups") || inKey.contains("viewroles")
+		if ("_id".equals(inKey) || "_parent".equals(inKey) || "_all".equals(inKey) || inKey.contains(".") || inKey.contains("viewusers") || inKey.contains("viewgroups")
 			|| inKey.contains("securityenabled"))
 		{
 			return true;

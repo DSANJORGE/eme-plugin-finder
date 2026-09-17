@@ -1445,7 +1445,7 @@ public class EntityModule extends BaseMediaModule
 				}
 			}
 			// Copy the custom permissions? Is there a better way?
-			String[] types = {"customusers", "customgroups", "customroles", "editorusers", "editorroles", "editorgroups"};
+			String[] types = {"customusers", "customgroups", "editorusers", "editorroles", "editorgroups"};
 			for (int i = 0; i < types.length; i++)
 			{
 				pickedrow.addValue(types[i], entity.getValue(types[i]));
@@ -1478,7 +1478,7 @@ public class EntityModule extends BaseMediaModule
 				return;
 			}
 			// Copy the custom permissions
-			String[] types = {"customusers", "customgroups", "customroles", "editorusers", "editorroles", "editorgroups"};
+			String[] types = {"customusers", "customgroups", "editorusers", "editorroles", "editorgroups"};
 			for (int i = 0; i < types.length; i++)
 			{
 				data.setValue(types[i], parententity.getValue(types[i]));

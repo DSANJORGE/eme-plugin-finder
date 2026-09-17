@@ -31,7 +31,7 @@ import org.openedit.util.strainer.FilterReader;
 import org.openedit.util.strainer.GroupFilter;
 import org.openedit.util.strainer.NotFilter;
 import org.openedit.util.strainer.OrFilter;
-import org.openedit.util.strainer.SettingsGroupFilter;
+import org.openedit.util.strainer.SettingsRoleFilter;
 import org.openedit.util.strainer.UserFilter;
 import org.openedit.util.strainer.UserProfileFilter;
 
@@ -159,9 +159,9 @@ public class AssetSecurityPageArchive implements AssetSecurityArchive
 						}
 					}
 					else
-						if (inRoot instanceof SettingsGroupFilter)
+						if (inRoot instanceof SettingsRoleFilter)
 						{
-							String groupid = ((SettingsGroupFilter) inRoot).getGroupId();
+							String groupid = ((SettingsRoleFilter) inRoot).getGroupId();
 							add.add("sgroup" + groupid);
 						}
 						else

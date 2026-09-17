@@ -95,7 +95,7 @@ public class AssetSearchSecurity extends BaseSearchSecurity implements SearchSec
 				required = inSearcher.createSearchQuery();
 			}
 
-			// attaches viewusers, viewgroups and viewroles
+			// attaches viewusers and viewgroups
 			attachStandardSecurity(inPageRequest, inSearcher, inQuery);
 
 			SearchQuery orchild = inSearcher.createSearchQuery();

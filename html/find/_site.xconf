@@ -130,7 +130,7 @@
   <permission name="editentities">
     <or>
       <userprofile name="viewsettings" value="true"/>
-      <settingsgroup id="user"/>
+      <settingsrole id="user"/>
     </or>
   </permission>
   <permission name="viewentities">
