@@ -8,40 +8,22 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.dom4j.Document;
-import org.dom4j.DocumentException;
-import org.dom4j.DocumentHelper;
-import org.dom4j.Element;
 import org.entermediadb.asset.Category;
 import org.entermediadb.asset.MediaArchive;
 import org.entermediadb.data.AddedPermission;
 import org.openedit.CatalogEnabled;
 import org.openedit.Data;
 import org.openedit.MultiValued;
-import org.openedit.OpenEditException;
-import org.openedit.WebPageRequest;
 import org.openedit.cache.CacheManager;
-import org.openedit.config.XMLConfiguration;
 import org.openedit.data.BaseData;
 import org.openedit.data.Searcher;
 import org.openedit.data.SearcherManager;
 import org.openedit.hittracker.HitTracker;
-import org.openedit.page.Page;
-import org.openedit.page.Permission;
-import org.openedit.page.PermissionSorter;
 import org.openedit.users.Group;
 import org.openedit.users.User;
-import org.openedit.util.strainer.Filter;
-import org.openedit.util.strainer.FilterReader;
-import org.openedit.util.strainer.FilterWriter;
-import org.openedit.util.strainer.GroupFilter;
-import org.openedit.util.strainer.OrFilter;
-import org.openedit.util.strainer.SettingsGroupFilter;
 
 public class PermissionManager implements CatalogEnabled
 {
