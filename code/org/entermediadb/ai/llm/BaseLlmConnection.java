@@ -9,6 +9,8 @@ import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.http.client.config.CookieSpecs;
+import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
@@ -19,6 +21,7 @@ import org.entermediadb.ai.AgentContext;
 import org.entermediadb.ai.llm.http.HttpResponse;
 import org.entermediadb.asset.MediaArchive;
 import org.openedit.util.HttpSharedConnection;
+import org.openedit.util.JSONParser;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.openedit.Data;
@@ -55,6 +58,95 @@ public class BaseLlmConnection implements LlmConnection
 			fieldConnection = new HttpSharedConnection();
 		}
 		return fieldConnection;
+	}
+
+	public static final int DEFAULT_TIMEOUT_SECONDS = 30;
+	public static final int MAX_TIMEOUT_SECONDS = 1200;
+
+	// ThreadLocal: a routed connection's delegate is shared across concurrent calls, so a
+	// per-instance field would let one thread's override leak into another thread's request.
+	// The HTTP call happens on the same thread that set the override, so this is enough.
+	protected ThreadLocal<Integer> fieldTimeoutOverride = new ThreadLocal<Integer>();
+
+	public void setTimeoutOverride(Integer inSeconds)
+	{
+		if (inSeconds == null)
+		{
+			fieldTimeoutOverride.remove();
+		}
+		else
+		{
+			fieldTimeoutOverride.set(inSeconds);
+		}
+	}
+
+	/** Route override, else the aiserver row's timeoutseconds, else 30; never above 1200. */
+	public int getTimeoutSeconds()
+	{
+		int seconds = DEFAULT_TIMEOUT_SECONDS;
+		Integer override = fieldTimeoutOverride.get();
+		if (override != null)
+		{
+			seconds = override;
+		}
+		else if (getAiServerData() != null)
+		{
+			String value = getAiServerData().get("timeoutseconds");
+			if (value != null && !value.trim().isEmpty())
+			{
+				try
+				{
+					int parsed = Integer.parseInt(value.trim());
+					if (parsed > 0)
+					{
+						seconds = parsed;
+					}
+				}
+				catch (NumberFormatException ex)
+				{
+					log.error("Bad timeoutseconds on aiserver " + getAiServerData().getId() + ": " + value);
+				}
+			}
+		}
+		return Math.max(1, Math.min(seconds, MAX_TIMEOUT_SECONDS));
+	}
+
+	/** Executes with this row's socket timeout instead of HttpSharedConnection's 30 s default. */
+	protected CloseableHttpResponse execute(HttpRequestBase inMethod)
+	{
+		RequestConfig config = RequestConfig.custom()
+			.setCookieSpec(CookieSpecs.STANDARD)
+			.setConnectionRequestTimeout(5 * 1000)
+			.setConnectTimeout(10 * 1000)
+			.setSocketTimeout(getTimeoutSeconds() * 1000)
+			.build();
+		inMethod.setConfig(config);
+		return getConnection().sharedExecute(inMethod);
+	}
+
+	/** Merges the aiserver row's extraparams JSON object (provider-specific options) into the request. */
+	public JSONObject mergeExtraParams(JSONObject inPayload)
+	{
+		if (getAiServerData() == null)
+		{
+			return inPayload;
+		}
+		String extra = getAiServerData().get("extraparams");
+		if (extra == null || extra.trim().isEmpty())
+		{
+			return inPayload;
+		}
+		// Misconfiguration must not kill the call: bad or non-object extraparams is logged and ignored.
+		try
+		{
+			JSONObject more = new JSONParser().parse(extra);
+			inPayload.putAll(more);
+		}
+		catch (Exception ex)
+		{
+			log.error("Ignoring invalid extraparams on aiserver " + getAiServerData().getId());
+		}
+		return inPayload;
 	}
 
 	public Data getAiServerData()
@@ -433,6 +525,42 @@ public class BaseLlmConnection implements LlmConnection
 
 	}
 
+	/** Same non-auth headers callJson applies to every eMe-to-LLM request: x-customerkey (falls back to "demo") plus any shared/extra headers. */
+	protected void applyLlmHeaders(HttpRequestBase inMethod, Map<String, String> inHeaders)
+	{
+		String customerkey = getMediaArchive().getCatalogSettingValue("catalog-storageid");
+		if (customerkey == null)
+		{
+			customerkey = "demo";
+		}
+
+		inMethod.setHeader("x-customerkey", customerkey); // standard eMedia header
+
+		Map<String, String> shared = getSharedHeaders();
+		for (Iterator iterator = shared.keySet().iterator(); iterator.hasNext();)
+		{
+			String key = (String) iterator.next();
+			String value = shared.get(key);
+			if (value != null)
+			{
+				inMethod.setHeader(key, value);
+			}
+		}
+
+		if (inHeaders != null)
+		{
+			for (Iterator iterator = inHeaders.keySet().iterator(); iterator.hasNext();)
+			{
+				String key = (String) iterator.next();
+				String value = inHeaders.get(key);
+				if (value != null)
+				{
+					inMethod.setHeader(key, value);
+				}
+			}
+		}
+	}
+
 	@Override
 	public LlmResponse callJson(String inPath, Map<String, String> inHeaders, JSONObject inPayload)
 	{
@@ -452,37 +580,14 @@ public class BaseLlmConnection implements LlmConnection
 		method.addHeader("Authorization", "Bearer " + getApiKey());
 		method.setHeader("Content-Type", "application/json");
 
-		String customerkey = getMediaArchive().getCatalogSettingValue("catalog-storageid");
-		if (customerkey == null)
-		{
-			customerkey = "demo";
-		}
-
-		method.setHeader("x-customerkey", customerkey); // standard eMedia header
-
-		for (Iterator iterator = getSharedHeaders().keySet().iterator(); iterator.hasNext();)
-		{
-			String key = (String) iterator.next();
-			String value = inHeaders.get(key);
-			method.setHeader(key, value);
-		}
-
-		if (inHeaders != null)
-		{
-			for (Iterator iterator = inHeaders.keySet().iterator(); iterator.hasNext();)
-			{
-				String key = (String) iterator.next();
-				String value = inHeaders.get(key);
-				method.setHeader(key, value);
-			}
-		}
+		applyLlmHeaders(method, inHeaders);
 
 		if (method instanceof HttpPost)
 		{
 			((HttpPost) method).setEntity(new StringEntity(inPayload.toJSONString(), StandardCharsets.UTF_8));
 		}
 		HttpSharedConnection connection = getConnection();
-		CloseableHttpResponse resp = connection.sharedExecute(method);
+		CloseableHttpResponse resp = execute(method);
 		Object object = null;
 		try
 		{

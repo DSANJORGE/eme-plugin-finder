@@ -23,6 +23,7 @@ import org.entermediadb.ai.classify.EmbeddingManager;
 import org.entermediadb.ai.llm.AutomationStep;
 import org.entermediadb.ai.llm.BaseAgentContext;
 import org.entermediadb.ai.llm.LlmResponse;
+import org.entermediadb.ai.llm.router.RoutedLlmConnection;
 import org.entermediadb.asset.MediaArchive;
 import org.entermediadb.asset.util.JsonUtil;
 import org.entermediadb.find.EntityManager;
@@ -796,29 +797,32 @@ public class AssistantManager extends BaseAiManager implements SkillStatusListen
 				String key = server.get("serverapikey");
 				if (key != null)
 				{
-					connection.addSharedHeader("Authorization", "Bearer " + server);
+					connection.addSharedHeader("Authorization", "Bearer " + key);
 				}
 				long start = System.currentTimeMillis();
 				try
 				{
 					JSONObject got = connection.getJson(address);
-					if (got != null)
+					String ok = got == null ? null : (String) got.get("status");
+					if ("ok".equals(ok))
 					{
-						String ok = (String) got.get("status");
-						if ("ok".equals(ok))
-						{
-							long end = System.currentTimeMillis();
-							Integer diff = Math.round(end - start);
-							inLog.info(address + " ok run in " + diff + " milliseconds");
-							speeds.put(serverroot, diff);
-						}
+						long end = System.currentTimeMillis();
+						Integer diff = Math.round(end - start);
+						inLog.info(address + " ok run in " + diff + " milliseconds");
+						speeds.put(serverroot, diff);
+						RoutedLlmConnection.closeBreaker(getMediaArchive().getCatalogId(), server.getId());
+					}
+					else
+					{
+						// A 200 that does not say "ok" is still a sick server: mark it down, leave the breaker alone.
+						inLog.info(address + " answered without an ok status: " + ok);
+						speeds.put(serverroot, -1);
 					}
 				}
 				catch (Exception ex)
 				{
 					inLog.info(address + " had error " + ex);
-					speeds.put(serverroot, Integer.MAX_VALUE); // Push back
-					// Ignore
+					speeds.put(serverroot, -1);
 				}
 			}
 		}
@@ -829,7 +833,7 @@ public class AssistantManager extends BaseAiManager implements SkillStatusListen
 			{
 				String serverroot = server.get("serverroot");
 				Integer speed = speeds.get(serverroot);
-				server.setValue("ordering", speed);
+				server.setValue("healthms", speed);
 				tosave.add(server);
 			}
 			getMediaArchive().getSearcher("aiserver").saveAllData(tosave, null);
