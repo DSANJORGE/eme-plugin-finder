@@ -48,14 +48,6 @@ public class SmartCreatorModule extends BaseMediaModule
 		return searchingManager;
 	}
 
-	public void loadTutorials(WebPageRequest inReq) throws Exception
-	{
-		Searcher tutorialsearcher = getMediaArchive(inReq).getSearcher("aitutorial");
-		HitTracker hits = tutorialsearcher.query().exact("featured", true).search();
-
-		inReq.putPageValue("tutorials", hits);
-	}
-
 	public void populateSection(WebPageRequest inReq) throws Exception
 	{
 		SmartCreatorPlaybackSkill creatorManager = getSmartCreatorSkill(inReq);

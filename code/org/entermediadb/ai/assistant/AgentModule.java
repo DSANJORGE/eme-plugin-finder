@@ -150,14 +150,6 @@ public class AgentModule extends BaseMediaModule
 		searcher.saveData(agentContext, inReq.getUser());
 	}
 
-	public void loadTutorials(WebPageRequest inReq) throws Exception
-	{
-		Searcher tutorialsearcher = getMediaArchive(inReq).getSearcher("aitutorial");
-		HitTracker hits = tutorialsearcher.query().exact("featured", true).search();
-
-		inReq.putPageValue("tutorials", hits);
-	}
-
 	public void sendWelcomeIfNeeded(WebPageRequest inReq) throws Exception
 	{
 		MediaArchive mediaArchive = getMediaArchive(inReq);
