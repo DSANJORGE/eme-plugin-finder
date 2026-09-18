@@ -791,6 +791,31 @@ public class AdminModule extends BaseMediaModule
 				mintTokens(inReq, user);
 			}
 		}
+		else if ("loginlink".equals(grantType))
+		{
+			// Emailed one-click sign-in (createLoginLink). The link row is deleted on the first try, then swapped for a fresh
+			// standard login code that the OTP path below consumes, so lastlogin, failed-login counting and the cookie are the same.
+			String token = inReq.getRequestParameter("token");
+			String hours = getMediaArchive(inReq).getCatalogSettingValue("loginlinkhours");
+			String userid = token == null ? null : consumeLoginLink(getSearcherManager(), token, new Date(), hours == null || !hours.trim().matches("\\d{1,3}") ? LOGINLINK_HOURS : Integer.parseInt(hours.trim()));
+			User user = userid == null ? null : userManager.getUser(userid);
+			if (user == null || !user.isEnabled() || user.getEmail() == null)
+			{
+				putOauthError(inReq, "invalid_grant", "Invalid or expired link");
+				log.info("Invalid or expired login link");
+				return;
+			}
+			String code = userManager.createNewTempLoginKey(user.getId(), user.getEmail(), user.getFirstName(), user.getLastName(), user.getScreenName(), true);
+			AuthenticationRequest aReq = userManager.createAuthenticationRequest(inReq, null, user);
+			aReq.putProperty("templogincode", code);
+			if (loginAndRedirect(aReq, inReq))
+			{
+				mintTokens(inReq, user);
+				return;
+			}
+			putOauthError(inReq, "invalid_grant", "Invalid or expired link");
+			return;
+		}
 		else if ("refresh_token".equals(grantType))
 		{
 			String refreshToken = inReq.getRequestParameter("refresh_token");
@@ -816,6 +841,77 @@ public class AdminModule extends BaseMediaModule
 		}
 
 		log.info("No authentication request created for grant_type " + grantType);
+	}
+
+	/** Default lifetime of an emailed sign-in link; catalog setting loginlinkhours overrides. */
+	public static final int LOGINLINK_HOURS = 12;
+
+	/**
+	 * Mints a one-click sign-in token for inUserid (token.json grant_type=loginlink&token=...). 256 random bits, returned
+	 * once; only its SHA-256 is stored, in system/templogincode with id "link_<user>" and no email, so a new link replaces
+	 * the user's previous one and the emailed-code flow (which looks codes up by email) never sees it.
+	 */
+	public static String createLoginLink(SearcherManager inSearchers, String inUserid)
+	{
+		String token = newLoginLinkToken();
+		org.openedit.data.Searcher searcher = inSearchers.getSearcher("system", "templogincode");
+		Data row = searcher.createNewData();
+		row.setId("link_" + inUserid);
+		row.setValue("user", inUserid);
+		row.setValue("securitycode", loginLinkHash(token));
+		row.setValue("date", new Date());
+		searcher.saveData(row);
+		return token;
+	}
+
+	/** 256 random bits, URL-safe base64 (43 chars). */
+	public static String newLoginLinkToken()
+	{
+		byte[] raw = new byte[32];
+		new java.security.SecureRandom().nextBytes(raw);
+		return java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(raw);
+	}
+
+	/** Deletes the link row of inToken (single use, even when the sign-in then fails) and returns its user when it was younger than inHours. */
+	public static String consumeLoginLink(SearcherManager inSearchers, String inToken, Date inNow, int inHours)
+	{
+		if (inToken.length() < 40)
+		{
+			return null; // never a 6-digit code
+		}
+		org.openedit.data.Searcher searcher = inSearchers.getSearcher("system", "templogincode");
+		Data row = (Data) searcher.query().exact("securitycode", loginLinkHash(inToken)).searchOne();
+		if (row == null || !row.getId().startsWith("link_"))
+		{
+			return null;
+		}
+		searcher.delete(row, null);
+		Date created = DateStorageUtil.getStorageUtil().parseFromObject(row.getValue("date"));
+		return loginLinkFresh(created, inNow, inHours) ? row.get("user") : null;
+	}
+
+	public static boolean loginLinkFresh(Date inCreated, Date inNow, int inHours)
+	{
+		return inCreated != null && !inCreated.after(inNow) && inNow.getTime() - inCreated.getTime() < inHours * 3600_000L;
+	}
+
+	/** "link:" + hex SHA-256: what is stored, so a leaked index holds no usable token. */
+	public static String loginLinkHash(String inToken)
+	{
+		try
+		{
+			byte[] d = java.security.MessageDigest.getInstance("SHA-256").digest(inToken.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+			StringBuilder sb = new StringBuilder("link:");
+			for (byte b : d)
+			{
+				sb.append(String.format("%02x", b));
+			}
+			return sb.toString();
+		}
+		catch (java.security.NoSuchAlgorithmException e)
+		{
+			throw new OpenEditException(e);
+		}
 	}
 
 	protected void mintTokens(WebPageRequest inReq, User inUser) throws Exception
