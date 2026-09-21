@@ -17,6 +17,7 @@ import org.openedit.Data;
 import org.openedit.MultiValued;
 import org.openedit.OpenEditException;
 import org.openedit.WebPageRequest;
+import org.openedit.data.QueryBuilder;
 import org.openedit.data.Searcher;
 import org.openedit.util.DateStorageUtil;
 
@@ -496,7 +497,7 @@ public class TopicManager extends BaseMediaModule
 			}
 			if ("finished".equals(currentchannel.get("channelstatus")))
 			{
-				activechannel = (MultiValued) mediaArchive.query("channel").exact("searchtype", "entitytutorial").exact("dataid", dataid).not("channelstatus", "finished").sort("dateDown").searchOne();
+				activechannel = (MultiValued) mediaArchive.query("channel").exact("searchtype", "entitytutorial").exact("dataid", dataid).exact("user", inReq.getUser().getId()).not("channelstatus", "finished").sort("dateDown").searchOne();
 			}
 			else
 			{
@@ -628,7 +629,18 @@ public class TopicManager extends BaseMediaModule
 	public void resetTutorial(WebPageRequest inReq)
 	{
 		Searcher channelSearcher = getMediaArchive(inReq).getSearcher("channel");
-		Collection<Data> channels = channelSearcher.query().exact("channeltype", "agenttutorchat").search();
+		String userid = inReq.getUser().getId();
+		String dataid = inReq.getRequestParameter("dataid");
+		QueryBuilder channelQuery = channelSearcher.query().exact("channeltype", "agenttutorchat").exact("user", userid);
+		if (dataid != null)
+		{
+			channelQuery.exact("dataid", dataid);
+		}
+		Collection<Data> channels = channelQuery.search();
+		if (channels.isEmpty())
+		{
+			return; // empty orgroup below must never widen to all rows
+		}
 		Collection<String> channelIds = channels.stream().map(d -> d.getId()).collect(Collectors.toList());
 		Collection<String> tutorialIds = channels.stream().map(d -> d.get("dataid")).collect(Collectors.toList());
 
@@ -639,15 +651,15 @@ public class TopicManager extends BaseMediaModule
 		chatterboxSearcher.deleteAll(chatterboxMessages, null);
 
 		Searcher tutoranswerSearcher = getMediaArchive(inReq).getSearcher("tutoranswer");
-		Collection<Data> tutoranswers = tutoranswerSearcher.query().orgroup("channel", channelIds).search();
+		Collection<Data> tutoranswers = tutoranswerSearcher.query().orgroup("channel", channelIds).exact("user", userid).search();
 		tutoranswerSearcher.deleteAll(tutoranswers, null);
 
-		Searcher tutorprogressSearcher = getMediaArchive(inReq).getSearcher("tutorprogress");
-		Collection<Data> tutorprogresses = tutorprogressSearcher.query().orgroup("entitytutorial", tutorialIds).search();
+		Searcher tutorprogressSearcher = getMediaArchive(inReq).getSearcher("tutorialprogress");
+		Collection<Data> tutorprogresses = tutorprogressSearcher.query().orgroup("entitytutorial", tutorialIds).exact("user", userid).search();
 		tutorprogressSearcher.deleteAll(tutorprogresses, null);
 
 		Searcher dailySearcher = getMediaArchive(inReq).getSearcher("tutordailychallenge");
-		Collection<Data> dailychallenges = dailySearcher.query().orgroup("channel", channelIds).search();
+		Collection<Data> dailychallenges = dailySearcher.query().orgroup("channel", channelIds).exact("user", userid).search();
 		dailySearcher.deleteAll(dailychallenges, null);
 
 	}
