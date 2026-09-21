@@ -142,12 +142,17 @@ public class AdaptiveTutorialUserCommentSkill extends AdaptiveTutorialBaseSkill
 			// the last one it saw.
 			Data question = questionid == null ? null : getMediaArchive().getData("entityquestion", questionid);
 			// The page the learner is looking at in the PDF viewer comes first, whatever the keywords match.
-			String viewed = viewedPage(requestValue(tutorMessageContext, request, "entityasset"), requestValue(tutorMessageContext, request, "pagenum"));
+			// TestU local patch: the pages sent in THIS call ("Title|N" and "Title" for a
+			// video's m:ss citation) — any citation of another page came from the "Recent
+			// conversation" turns, not from reading, and is dropped below. The value is the
+			// text the model read under that heading: quoteForCitation quotes from it.
+			Map<String, String> sent = new LinkedHashMap<String, String>();
+			String viewed = viewedPage(requestValue(tutorMessageContext, request, "entityasset"), requestValue(tutorMessageContext, request, "pagenum"), sent);
 			// A session follow-up ("¿Por qué las otras opciones están mal?") has no keywords of its own: the
 			// question's text and its correct option find the pages the learner's words cannot.
 			String questiontext = question == null ? null : question.get("question") + " " + question.get("option_" + String.valueOf(question.get("correctoption")).toLowerCase());
 			long started = System.currentTimeMillis();
-			String excerpts = findReferenceExcerpts(tutorialid, usermessage, questiontext);
+			String excerpts = findReferenceExcerpts(tutorialid, sent, usermessage, questiontext);
 			log.info("Tutor excerpts: " + excerpts.length() + " chars in " + (System.currentTimeMillis() - started) + " ms");
 			tutorMessageContext.putContextValue("referenceexcerpts", viewed + excerpts);
 			if (question != null)
@@ -169,6 +174,8 @@ public class AdaptiveTutorialUserCommentSkill extends AdaptiveTutorialBaseSkill
 				// The question's authored source: citable like an excerpt.
 				if (question.get("sourcecite") != null)
 				{
+					sent.put(question.get("sourcecite"), question.get("sourcequote"));
+					sent.put(question.get("sourcecite") + "|" + question.get("sourcepage"), question.get("sourcequote"));
 					qb.append("Source of the question [").append(question.get("sourcecite")).append(question.get("sourcepage") == null ? "" : ", p. " + question.get("sourcepage")).append("]: ").append(question.get("sourcequote") == null ? "" : question.get("sourcequote")).append("\n");
 				}
 				prompt = qb + "\n" + prompt;
@@ -196,9 +203,31 @@ public class AdaptiveTutorialUserCommentSkill extends AdaptiveTutorialBaseSkill
 				tutorMessageContext.error("No answer from tutorial context for: " + usermessage);
 				return;
 			}
+			// TestU local patch: llamat sometimes brackets a lesson heading as if it were a
+			// citation ("[4.3 Autenticación multifactor (MFA)]"); the app reads any
+			// [..., p. N] / [..., m:ss] as a source, so drop every bracket group that is not one.
+			message = BADCITE.matcher(message).replaceAll("").trim();
+			java.util.regex.Matcher cm = ANYCITE.matcher(message);
+			StringBuffer grounded = new StringBuffer();
+			while (cm.find())
+			{
+				String key = cm.group(2) == null ? cm.group(1).trim() : cm.group(1).trim() + "|" + cm.group(2);
+				if (!sent.containsKey(key))
+				{
+					log.info("tutor cite dropped: " + cm.group().trim() + " not among sent pages " + sent.keySet());
+					cm.appendReplacement(grounded, "");
+				}
+			}
+			cm.appendTail(grounded);
+			message = grounded.toString().trim();
+			if (!message.contains(">>"))
+			{
+				// The app renders the ">> ..." lines as follow-up chips; llamat sometimes omits them.
+				message = message + "\n\n>> " + ("evaluation".equals(mode) ? "¿Quieres que te explique cómo funciona esta pregunta?" : question != null ? "¿Quieres que te explique la pregunta en juego?" : "¿Quieres que te explique algún punto de esta lección?");
+			}
 			// The RAG path gets the passage and its boxes from the embedding server's
 			// sources; here the tutor wrote the citation itself, so look the page up.
-			answer = message + quoteForCitation(tutorialid, message, usermessage);
+			answer = message + quoteForCitation(tutorialid, message, usermessage, sent);
 		}
 
 		LlmResponse llmResponse = new BasicLlmResponse();
@@ -321,8 +350,11 @@ public class AdaptiveTutorialUserCommentSkill extends AdaptiveTutorialBaseSkill
 	 * local-excerpt path has no sources, so the cited page is looked up here and the same
 	 * `> passage` and `[[hl x,y,w,h;...]]` lines are appended. "" when the citation names no page
 	 * this tutorial holds, or the passage is not found on it (video citations carry no boxes).
+	 * The passage is picked from what the model read under that heading (inSent, "Title|N" to the
+	 * excerpt sent) — a page re-scan quoted the "decálogo" intro of a page cited for its sentence
+	 * on two-step verification (2026-09-21); the on-screen page is sent whole, so it scans as before.
 	 */
-	protected String quoteForCitation(String inTutorialId, String inAnswer, String inQuery)
+	protected String quoteForCitation(String inTutorialId, String inAnswer, String inQuery, Map<String, String> inSent)
 	{
 		if (inTutorialId == null)
 		{
@@ -341,6 +373,17 @@ public class AdaptiveTutorialUserCommentSkill extends AdaptiveTutorialBaseSkill
 		{
 			return "";
 		}
+		String read = inSent.get(title + "|" + page);
+		String text = bestSentence(read, inQuery, inAnswer);
+		if (text.isEmpty() && read != null && read.length() <= 600)
+		{
+			// The question's authored source quote: the passage itself, whatever the wording of the reply.
+			text = read.trim();
+		}
+		if (text.isEmpty())
+		{
+			return "";
+		}
 		Data doc = null;
 		for (Object candidate : getMediaArchive().query("entityasset").exact("entitytutorial", inTutorialId).search())
 		{
@@ -351,12 +394,6 @@ public class AdaptiveTutorialUserCommentSkill extends AdaptiveTutorialBaseSkill
 			}
 		}
 		if (doc == null)
-		{
-			return "";
-		}
-		Data docpage = getMediaArchive().query("entityassetpage").exact("entityasset", doc.getId()).exact("pagenum", page).searchOne();
-		String text = docpage == null ? null : bestSentence(docpage.get("markdowncontent"), inQuery, inAnswer);
-		if (text == null || text.isEmpty())
 		{
 			return "";
 		}
@@ -426,8 +463,9 @@ public class AdaptiveTutorialUserCommentSkill extends AdaptiveTutorialBaseSkill
 		String best = "";
 		int bestScore = 0;
 		// Page markdown wraps lines mid-sentence: join them, split on sentence ends
-		// only — including a period glued to a footnote mark ("encuestadas.1 También").
-		for (String raw : inText.replaceAll("\\s*\\n\\s*", " ").split("(?<=[.!?])\\s+|(?<=[.!?])(?=\\d{1,2}\\s)"))
+		// only — including a period glued to a footnote mark ("encuestadas.1 También") —
+		// and on blank lines: two passages of an excerpt are not one sentence of the page.
+		for (String raw : inText.replaceAll("\\n\\s*\\n", "\u2029").replaceAll("\\s*\\n\\s*", " ").split("(?<=[.!?])\\s+|(?<=[.!?])(?=\\d{1,2}\\s)|\u2029"))
 		{
 			String sentence = raw.replaceAll("[*#_`|>]+", "").replaceAll("^\\d{1,2}\\s+", "").replaceAll("\\s+", " ").trim();
 			if (sentence.length() < 40 || sentence.length() > 600)
@@ -514,6 +552,15 @@ public class AdaptiveTutorialUserCommentSkill extends AdaptiveTutorialBaseSkill
 
 	/** `[Title, p. N]` as the tutor writes it; video citations (`[Title, m:ss]`) carry no boxes. */
 	private static final java.util.regex.Pattern PAGECITE = java.util.regex.Pattern.compile("\\[([^\\[\\]]+?),\\s*p\\.?\\s*(\\d+)\\]");
+
+	/** Any citation, page or video: group 1 the title, group 2 the page (null for `m:ss`). Leading blanks included, like BADCITE. */
+	private static final java.util.regex.Pattern ANYCITE = java.util.regex.Pattern.compile("[ \\t]*\\[([^\\[\\]\\n]+?),\\s*(?:p\\.?\\s*(\\d+)|\\d+:\\d\\d)\\]");
+
+	/** In a past reply: a `> quote` or `[[hl …]]` line (not a `>>` follow-up), or any citation. */
+	private static final java.util.regex.Pattern STALECITE = java.util.regex.Pattern.compile("(?m)^(?:> |\\[\\[hl ).*$\\n?|[ \\t]*\\[[^\\[\\]\\n]+?,\\s*(?:p\\.?\\s*\\d+|\\d+:\\d\\d)\\]");
+
+	/** A single bracket group that is not a `[Title, p. N]` / `[Title, m:ss]` citation (never a `[[hl` box). */
+	private static final java.util.regex.Pattern BADCITE = java.util.regex.Pattern.compile("[ \\t]*(?<!\\[)\\[(?!\\[)(?![^\\]\\n]+,\\s*(p\\.\\s*\\d+|\\d+:\\d\\d)\\])[^\\[\\]\\n]*\\](?!\\])");
 
 	/**
 	 * Page-relative boxes (x,y,w,h in 0–1, one per text line, ';'-joined) of inQuote on page inPage of
@@ -635,6 +682,17 @@ public class AdaptiveTutorialUserCommentSkill extends AdaptiveTutorialBaseSkill
 		inOut.append(String.format(java.util.Locale.ROOT, "%.4f,%.4f,%.4f,%.4f", inBox[0] / inW, inBox[1] / inH, (inBox[2] - inBox[0]) / inW, (inBox[3] - inBox[1]) / inH));
 	}
 
+	/**
+	 * ponytail: plural fold only ("proveedores" = "proveedor"), what the index's English snowball does
+	 * to Spanish, so a passage matches the words the search engine matched the page on. Upgrade path:
+	 * the searcher's own highlighting (highlight="true" on the field, SearchHitData.getHighlights)
+	 * once description is analysed in Spanish; its 180-char fragments are not passages to read.
+	 */
+	private String fold(String inToken)
+	{
+		return inToken.length() > 4 ? inToken.replaceAll("(es|s)$", "") : inToken;
+	}
+
 	/** Lowercase, accents and punctuation dropped — pdftotext words vs markdown words. */
 	private String plain(String inWord)
 	{
@@ -646,8 +704,8 @@ public class AdaptiveTutorialUserCommentSkill extends AdaptiveTutorialBaseSkill
 	 * to the tutorial, split into entityassetpage records with markdowncontent) as prompt text, each
 	 * headed by the document title and page so the tutor can cite it. Empty when nothing matches.
 	 */
-	/** One page of a document as a citable excerpt, or "" when either id is missing or the page is unknown. */
-	protected String viewedPage(String inAssetId, String inPage)
+	/** One page of a document as a citable excerpt (its "Title|N" added to inSent), or "" when either id is missing or the page is unknown. */
+	protected String viewedPage(String inAssetId, String inPage, Map<String, String> inSent)
 	{
 		if (inAssetId == null || inAssetId.isEmpty() || inPage == null || inPage.isEmpty())
 		{
@@ -660,14 +718,20 @@ public class AdaptiveTutorialUserCommentSkill extends AdaptiveTutorialBaseSkill
 			return "";
 		}
 		Data doc = getMediaArchive().getCachedData("entityasset", inAssetId);
-		return "[" + (doc == null ? "Reference document" : doc.getName()) + ", p. " + inPage + "] (the page the learner is looking at)\n" + (text.length() > 4000 ? text.substring(0, 4000) : text) + "\n\n";
+		String title = doc == null ? "Reference document" : doc.getName();
+		text = text.length() > 4000 ? text.substring(0, 4000) : text;
+		inSent.put(title, text);
+		inSent.put(title + "|" + inPage, text);
+		return "[" + title + ", p. " + inPage + "] (the page the learner is looking at)\n" + text + "\n\n";
 	}
 
 	/**
 	 * Up to 3 pages of the tutorial's documents most relevant to the queries (the learner's words first,
-	 * then the question's). "" when nothing matches.
+	 * then the question's), each recorded in inSent as "Title|N" with the text sent. "" when nothing
+	 * matches. A page longer than the budget is sent as its passages sharing most words with the queries; on
+	 * a video's page each caption cue is a paragraph, its timestamp is what a `m:ss` citation needs.
 	 */
-	protected String findReferenceExcerpts(String tutorialid, String... queries)
+	protected String findReferenceExcerpts(String tutorialid, Map<String, String> inSent, String... queries)
 	{
 		if (tutorialid == null)
 		{
@@ -681,7 +745,9 @@ public class AdaptiveTutorialUserCommentSkill extends AdaptiveTutorialBaseSkill
 		// ponytail: ranked keyword match on the page text; the embedding server does the
 		// real semantic retrieval when its /chat works. markdowncontent is not_analyzed (one
 		// keyword per page): search description, which holds the page text. match = one analyzed
-		// OR query ranked by relevance (accents folded, stemmed). freeform split words on ASCII
+		// OR query ranked by relevance (lowersnowball: accents folded, English snowball strips the
+		// plural -s/-es; the index's "spanish" analyzer would need BaseElasticSearcher.configureDetail
+		// and a reindex, description's analyzer is not a field attribute). freeform split words on ASCII
 		// letters ("Política" -> "Pol" "tica") and made its last word mandatory even in "a OR b"
 		// form, so an applied question ending in a word no page had ("...por el agua?") found
 		// nothing and the tutor refused (2026-09-16). Each query separately, so the question's
@@ -715,17 +781,150 @@ public class AdaptiveTutorialUserCommentSkill extends AdaptiveTutorialBaseSkill
 			}
 		}
 		StringBuilder out = new StringBuilder();
+		// The learner's words weigh 3, the question's 1: the question in play is there to find a
+		// page when the message has no keywords, not to pick the passage when it has.
+		Map<String, Double> qterms = new HashMap<String, Double>();
+		for (int i = 0; i < queries.length; i++)
+		{
+			for (String term : terms(queries[i]))
+			{
+				qterms.putIfAbsent(fold(term), i == 0 ? 3.0 : 1.0);
+			}
+		}
+		// Calibration knob: catalogsettings "tutorexcerptchars", chars sent per retrieved page.
+		// 4000 sends a typical page (~2800) whole and the best 4000 of a longer one (a video's
+		// transcript), not its first 4000. Measured on llamat 2026-09-21, 21 questions x 3:
+		// 4000 = 5374 prompt tokens, 11 not-found; 2500 = 4563-4745, 15-16; 1500 = 4206, 16-20;
+		// LLM time 3.3 s vs 3.1 s. Trimmed pages lose the lines around a hit that let the
+		// model settle a borderline question, for a quarter second.
+		String budget = getMediaArchive().getCatalogSettingValue("tutorexcerptchars");
+		int max = budget == null || budget.isEmpty() ? 4000 : Integer.parseInt(budget);
 		for (Data page : pages.values())
 		{
 			String text = page.get("markdowncontent");
-			if (text == null || text.isEmpty())
-			{
-				continue;
-			}
 			Data doc = getMediaArchive().getCachedData("entityasset", page.get("entityasset"));
-			out.append("[").append(doc == null ? "Reference document" : doc.getName()).append(", p. ").append(page.get("pagenum")).append("]\n");
-			// 2500 cut the second half of a typical page (~2800 chars).
-			out.append(text.length() > 4000 ? text.substring(0, 4000) : text).append("\n\n");
+			String title = doc == null ? "Reference document" : doc.getName();
+			if (text == null || text.isEmpty() || inSent.containsKey(title + "|" + page.get("pagenum")))
+			{
+				continue; // the page on screen, already sent whole
+			}
+			text = bestParagraphs(text, qterms, max);
+			inSent.put(title, text);
+			inSent.put(title + "|" + page.get("pagenum"), text);
+			out.append("[").append(title).append(", p. ").append(page.get("pagenum")).append("]\n");
+			out.append(text).append("\n\n");
+		}
+		return out.toString();
+	}
+
+	/**
+	 * The passages of inText (~300+ chars: blank-line blocks, their sentences, or the SRT cues of a
+	 * transcript, short ones merged forward) scoring highest on inTerms (folded word to weight), in
+	 * page order, up to inMax chars; the first passages when none scores (the search engine matched
+	 * a stemmed form). The ~4000-char page cost
+	 * ~1000 prompt tokens each, ~2 s of llamat prompt processing per 4K, and buried the passage the
+	 * tutor should quote.
+	 */
+	protected String bestParagraphs(String inText, Map<String, Double> inTerms, int inMax)
+	{
+		if (inText.length() <= inMax)
+		{
+			return inText;
+		}
+		// Short blocks (a heading, a 4-second cue) ride with what follows them up to ~300 chars:
+		// alone, a title line outscored its body and a cue was half a sentence.
+		java.util.List<String> chunks = new java.util.ArrayList<String>();
+		StringBuilder chunk = new StringBuilder();
+		for (String block : inText.trim().split("\\n\\s*\\n|\\n(?=\\d+\\n\\d\\d:\\d\\d)"))
+		{
+			// A dense PDF page is one block with no blank line: its sentences are the units
+			// (never inside a caption cue, which must keep its timestamp).
+			for (String piece : block.contains("-->") ? new String[] {block} : block.split("(?<=[.!?])\\s+"))
+			{
+				chunk.append(chunk.length() > 0 ? "\n" : "").append(piece);
+				if (chunk.length() >= 300)
+				{
+					chunks.add(chunk.toString());
+					chunk.setLength(0);
+				}
+			}
+		}
+		if (chunk.length() > 0)
+		{
+			chunks.add(chunk.toString());
+		}
+		String[] paragraphs = chunks.toArray(new String[chunks.size()]);
+		// Each occurrence of a query word counts 1 / (passages of this page holding it): "derechos"
+		// and "plan" are in every passage of the PNA and outscored the one on "debida diligencia".
+		Map<String, Integer> df = new HashMap<String, Integer>();
+		java.util.List<java.util.List<String>> words = new java.util.ArrayList<java.util.List<String>>();
+		for (String p : paragraphs)
+		{
+			java.util.List<String> folded = new java.util.ArrayList<String>();
+			for (String t : tokens(p))
+			{
+				folded.add(fold(t));
+			}
+			words.add(folded);
+			for (String t : new java.util.HashSet<String>(folded))
+			{
+				df.merge(t, 1, Integer::sum);
+			}
+		}
+		double[] scores = new double[paragraphs.length];
+		Integer[] order = new Integer[paragraphs.length];
+		for (int i = 0; i < paragraphs.length; i++)
+		{
+			for (String t : words.get(i))
+			{
+				scores[i] += inTerms.containsKey(t) ? inTerms.get(t) / df.get(t) : 0;
+			}
+			order[i] = i;
+		}
+		java.util.Arrays.sort(order, (a, b) -> Double.compare(scores[b], scores[a]));
+		// Each hit rides with the passage after and before it: alone, the sentence naming "PR-CER"
+		// lost the lines saying what CER is, and a caption cue lost the rest of its sentence.
+		java.util.Set<Integer> picks = new java.util.LinkedHashSet<Integer>();
+		for (int i : order)
+		{
+			if (scores[i] == 0 && scores[order[0]] > 0)
+			{
+				break;
+			}
+			for (int k : new int[] {i, i + 1, i - 1})
+			{
+				if (k >= 0 && k < paragraphs.length)
+				{
+					picks.add(k);
+				}
+			}
+		}
+		String[] keep = new String[paragraphs.length];
+		int length = 0;
+		for (int i : picks)
+		{
+			if (inMax - length < 200)
+			{
+				break;
+			}
+			// A passage past the budget is cut (at a sentence end when it has one), not skipped:
+			// it outscores what follows.
+			keep[i] = paragraphs[i];
+			if (keep[i].length() > inMax - length)
+			{
+				keep[i] = keep[i].substring(0, inMax - length);
+				int end = Math.max(keep[i].lastIndexOf(". "), keep[i].lastIndexOf(".\n"));
+				keep[i] = end > keep[i].length() / 2 ? keep[i].substring(0, end + 1) : keep[i];
+			}
+			length += keep[i].length();
+		}
+		StringBuilder out = new StringBuilder();
+		for (String p : keep)
+		{
+			if (p != null)
+			{
+				out.append(out.length() > 0 ? "\n\n" : "").append(p);
+			}
 		}
 		return out.toString();
 	}
@@ -819,7 +1018,9 @@ public class AdaptiveTutorialUserCommentSkill extends AdaptiveTutorialBaseSkill
 			String text;
 			if ("agent".equals(row.get("user")))
 			{
-				text = "Tutor: " + row.get("message");
+				// Citations, `> quote` and `[[hl` lines of past replies stripped: those pages are
+				// not sent with this message, and a copied stale citation is dropped anyway.
+				text = "Tutor: " + STALECITE.matcher(String.valueOf(row.get("message"))).replaceAll("").trim();
 			}
 			else
 			{
