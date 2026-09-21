@@ -796,7 +796,7 @@ public class AssistantManager extends BaseAiManager implements SkillStatusListen
 				String key = server.get("serverapikey");
 				if (key != null)
 				{
-					connection.addSharedHeader("Authorization", "Bearer " + server);
+					connection.addSharedHeader("Authorization", "Bearer " + key);
 				}
 				long start = System.currentTimeMillis();
 				try
@@ -817,7 +817,7 @@ public class AssistantManager extends BaseAiManager implements SkillStatusListen
 				catch (Exception ex)
 				{
 					inLog.info(address + " had error " + ex);
-					speeds.put(serverroot, Integer.MAX_VALUE); // Push back
+					speeds.put(serverroot, -1);
 					// Ignore
 				}
 			}
@@ -829,7 +829,7 @@ public class AssistantManager extends BaseAiManager implements SkillStatusListen
 			{
 				String serverroot = server.get("serverroot");
 				Integer speed = speeds.get(serverroot);
-				server.setValue("ordering", speed);
+				server.setValue("healthms", speed);
 				tosave.add(server);
 			}
 			getMediaArchive().getSearcher("aiserver").saveAllData(tosave, null);
