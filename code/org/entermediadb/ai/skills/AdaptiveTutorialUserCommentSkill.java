@@ -196,7 +196,9 @@ public class AdaptiveTutorialUserCommentSkill extends AdaptiveTutorialBaseSkill
 				tutorMessageContext.error("No answer from tutorial context for: " + usermessage);
 				return;
 			}
-			answer = message;
+			// The RAG path gets the passage and its boxes from the embedding server's
+			// sources; here the tutor wrote the citation itself, so look the page up.
+			answer = message + quoteForCitation(tutorialid, message, usermessage);
 		}
 
 		LlmResponse llmResponse = new BasicLlmResponse();
@@ -311,6 +313,58 @@ public class AdaptiveTutorialUserCommentSkill extends AdaptiveTutorialBaseSkill
 			return "";
 		}
 		return (quote.isEmpty() ? "" : "\n\n> " + quote) + "\n" + extras + "\n" + primary + (rects.isEmpty() ? "" : "\n[[hl " + rects + "]]");
+	}
+
+	/**
+	 * TestU local patch: the verbatim passage and its page boxes for a citation the tutor wrote
+	 * itself. The embedding-server path builds these from its sources (citeFromSources); the
+	 * local-excerpt path has no sources, so the cited page is looked up here and the same
+	 * `> passage` and `[[hl x,y,w,h;...]]` lines are appended. "" when the citation names no page
+	 * this tutorial holds, or the passage is not found on it (video citations carry no boxes).
+	 */
+	protected String quoteForCitation(String inTutorialId, String inAnswer, String inQuery)
+	{
+		if (inTutorialId == null)
+		{
+			return "";
+		}
+		java.util.regex.Matcher m = PAGECITE.matcher(inAnswer);
+		String title = null;
+		String page = null;
+		while (m.find())
+		{
+			// Last citation wins: the app reads that one as the primary source.
+			title = m.group(1).trim();
+			page = m.group(2);
+		}
+		if (title == null)
+		{
+			return "";
+		}
+		Data doc = null;
+		for (Object candidate : getMediaArchive().query("entityasset").exact("entitytutorial", inTutorialId).search())
+		{
+			if (title.equals(((Data) candidate).getName()))
+			{
+				doc = (Data) candidate;
+				break;
+			}
+		}
+		if (doc == null)
+		{
+			return "";
+		}
+		Data docpage = getMediaArchive().query("entityassetpage").exact("entityasset", doc.getId()).exact("pagenum", page).searchOne();
+		String text = docpage == null ? null : bestSentence(docpage.get("markdowncontent"), inQuery, inAnswer);
+		if (text == null || text.isEmpty())
+		{
+			return "";
+		}
+		// No boxes, no passage: a citation the learner cannot be shown on the page is
+		// a video (whose "page" holds the asset's metadata, not prose) or a sentence
+		// pdftotext could not match — quoting either just adds noise.
+		String rects = highlightRects(doc, page, text);
+		return rects.isEmpty() ? "" : "\n\n> " + text + "\n[[hl " + rects + "]]";
 	}
 
 	/** "m:ss" of a millisecond offset — the app's video citation format. */
@@ -457,6 +511,9 @@ public class AdaptiveTutorialUserCommentSkill extends AdaptiveTutorialBaseSkill
 
 	// ponytail: poppler on the PATH (or Homebrew's); an EME commandmap entry when it moves servers.
 	private static final String[] PDFTOTEXT = {"/opt/homebrew/bin/pdftotext", "/usr/bin/pdftotext", "/usr/local/bin/pdftotext"};
+
+	/** `[Title, p. N]` as the tutor writes it; video citations (`[Title, m:ss]`) carry no boxes. */
+	private static final java.util.regex.Pattern PAGECITE = java.util.regex.Pattern.compile("\\[([^\\[\\]]+?),\\s*p\\.?\\s*(\\d+)\\]");
 
 	/**
 	 * Page-relative boxes (x,y,w,h in 0–1, one per text line, ';'-joined) of inQuote on page inPage of

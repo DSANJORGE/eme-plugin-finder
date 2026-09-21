@@ -309,6 +309,8 @@ public class OpenAiConnection extends BaseLlmConnection implements CatalogEnable
 		JSONParser parser = new JSONParser();
 		JSONObject structureDef = (JSONObject) parser.parse(inStructure);
 
+		stripLlamaExtensions(structureDef);
+
 		log.info("Sent: " + structureDef.toJSONString());
 
 		HttpPost method = new HttpPost(getServerRoot() + "/chat/completions");
@@ -320,11 +322,38 @@ public class OpenAiConnection extends BaseLlmConnection implements CatalogEnable
 
 		CloseableHttpResponse resp = getConnection().sharedExecute(method);
 
+		// TestU local patch: groq rate-limits bursts (two learners asking at once is
+		// enough), and the learner is told IRIS is slow for an answer never attempted.
+		// One retry costs two seconds; a second provider is the routing work's job.
+		for (int tries = 0; tries < 2 && resp.getStatusLine().getStatusCode() == 429; tries++)
+		{
+			getConnection().release(resp);
+			log.info("Rate limited, retrying: " + inFunctionName);
+			try
+			{
+				Thread.sleep(2000);
+			}
+			catch (InterruptedException e)
+			{
+				Thread.currentThread().interrupt();
+				break;
+			}
+			resp = getConnection().sharedExecute(method);
+		}
+
 		try
 		{
 			if (resp.getStatusLine().getStatusCode() != 200)
 			{
-				throw new OpenEditException("OpenAI error: " + resp.getStatusLine());
+				JSONObject salvaged = salvageStructure(resp, structureDef);
+				if (salvaged == null)
+				{
+					throw new OpenEditException("OpenAI error: " + resp.getStatusLine());
+				}
+				log.info("Salvaged: " + salvaged.toJSONString());
+				LlmResponse salvage = createResponse();
+				salvage.setRawResponse(salvaged);
+				return salvage;
 			}
 
 			JSONObject json = (JSONObject) getConnection().parseMap(resp);
@@ -341,6 +370,94 @@ public class OpenAiConnection extends BaseLlmConnection implements CatalogEnable
 		}
 	}
 
+	/**
+	 * TestU local patch: `chat_template_kwargs` (enable_thinking) and `id_slot` are llama.cpp server
+	 * extensions. A shared call template carries them for llamat, where enable_thinking false saves
+	 * ~8 s a reply; groq answers 400 "property 'chat_template_kwargs' is unsupported" and anthropic
+	 * "Extra inputs are not permitted", so every template without an openai/ fork failed outright
+	 * (analytics_classify_questions on every mastery run, Diego 2026-09-20). Dropping them here keeps
+	 * one prompt per call instead of a fork per provider; LlamaOpenAiConnection reports protocol
+	 * "llama" and is left untouched.
+	 *
+	 * enable_thinking false is translated rather than dropped: it is llama.cpp's way of saying "do not
+	 * reason before answering", and `reasoning_effort` is the OpenAI-compatible way. It is not cosmetic
+	 * on groq's free tier, where 8000 tokens/minute is the binding limit: a classify batch spent 1380
+	 * of its 1835 completion tokens on reasoning, so five batches exhausted the minute and the rest of
+	 * the run 429'd. Only a template that already asked for thinking off is affected.
+	 */
+	protected void stripLlamaExtensions(JSONObject inRequest)
+	{
+		if ("llama".equals(getLlmProtocol()))
+		{
+			return;
+		}
+		JSONObject kwargs = (JSONObject) inRequest.get("chat_template_kwargs");
+		if (kwargs != null && Boolean.FALSE.equals(kwargs.get("enable_thinking")) && inRequest.get("reasoning_effort") == null)
+		{
+			inRequest.put("reasoning_effort", "low");
+		}
+		inRequest.remove("chat_template_kwargs");
+		inRequest.remove("id_slot");
+	}
+
+	/**
+	 * TestU local patch: the answer inside a `json_validate_failed` error, as if it had come back
+	 * normally. A reasoning model (groq's gpt-oss-120b) writes a good reply often enough and then
+	 * fails to wrap it in the schema; groq answers 400 with the prose in `failed_generation`, so the
+	 * learner saw "IRIS is taking longer than usual" for a reply already written and paid for
+	 * (Diego, 2026-09-20). Only a schema of one required property can be filled this way; anything
+	 * else returns null and the caller throws as before.
+	 */
+	protected JSONObject salvageStructure(CloseableHttpResponse inResponse, JSONObject inRequest)
+	{
+		try
+		{
+			// parseMap throws on a non-200 instead of handing back the body, and the body
+			// is the whole point here, so read the entity directly.
+			String raw = org.apache.http.util.EntityUtils.toString(inResponse.getEntity(), StandardCharsets.UTF_8);
+			JSONObject body = (JSONObject) new JSONParser().parse(raw);
+			JSONObject error = body == null ? null : (JSONObject) body.get("error");
+			if (error == null || !"json_validate_failed".equals(error.get("code")))
+			{
+				// Whatever it is, it is worth reading: the status line alone said nothing.
+				log.info("Not salvageable: " + raw);
+				return null;
+			}
+			String text = (String) error.get("failed_generation");
+			if (text == null || text.trim().isEmpty())
+			{
+				return null;
+			}
+			JSONObject format = (JSONObject) inRequest.get("response_format");
+			JSONObject schema = format == null ? null : (JSONObject) format.get("json_schema");
+			schema = schema == null ? null : (JSONObject) schema.get("schema");
+			JSONArray required = schema == null ? null : (JSONArray) schema.get("required");
+			if (required == null || required.size() != 1)
+			{
+				return null;
+			}
+			JSONObject content = new JSONObject();
+			content.put(String.valueOf(required.get(0)), text.trim());
+			JSONObject message = new JSONObject();
+			message.put("role", "assistant");
+			message.put("content", content.toJSONString());
+			JSONObject choice = new JSONObject();
+			choice.put("index", Long.valueOf(0));
+			choice.put("message", message);
+			choice.put("finish_reason", "stop");
+			JSONArray choices = new JSONArray();
+			choices.add(choice);
+			JSONObject out = new JSONObject();
+			out.put("choices", choices);
+			return out;
+		}
+		catch (Exception e)
+		{
+			log.error("Could not read the error body", e);
+			return null;
+		}
+	}
+
 	@Override
 	public LlmResponse callSmartCreatorAiAction(AgentContext inParams, String inActionName)
 	{
@@ -352,6 +469,8 @@ public class OpenAiConnection extends BaseLlmConnection implements CatalogEnable
 
 		JSONParser parser = new JSONParser();
 		JSONObject structureDef = (JSONObject) parser.parse(inStructure);
+
+		stripLlamaExtensions(structureDef);
 
 		log.info("Sent: " + structureDef.toJSONString());
 
