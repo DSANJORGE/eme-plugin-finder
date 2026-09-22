@@ -190,13 +190,38 @@ public class AnthropicConnection extends OpenAiConnection
 			}
 			out.put("tools", converted);
 
-			JSONObject toolChoice = (JSONObject) inOpenAi.get("tool_choice");
-			if (toolChoice != null && toolChoice.get("function") != null)
+			Object toolChoice = inOpenAi.get("tool_choice");
+			if (toolChoice != null)
 			{
-				JSONObject choice = new JSONObject();
-				choice.put("type", "tool");
-				choice.put("name", ((JSONObject) toolChoice.get("function")).get("name"));
-				out.put("tool_choice", choice);
+				if (toolChoice instanceof JSONObject)
+				{
+					JSONObject choice = (JSONObject) toolChoice;
+					if (choice.get("function") != null)
+					{
+						JSONObject mapped = new JSONObject();
+						mapped.put("type", "tool");
+						mapped.put("name", ((JSONObject) choice.get("function")).get("name"));
+						out.put("tool_choice", mapped);
+					}
+				}
+				else if (toolChoice instanceof String)
+				{
+					String choice = (String) toolChoice;
+					if ("required".equals(choice))
+					{
+						JSONObject mapped = new JSONObject();
+						mapped.put("type", "any");
+						out.put("tool_choice", mapped);
+					}
+					else if ("auto".equals(choice))
+					{
+						JSONObject mapped = new JSONObject();
+						mapped.put("type", "auto");
+						out.put("tool_choice", mapped);
+					}
+					// "none" drops the key (do nothing)
+					// anything else is ignored (do nothing)
+				}
 			}
 		}
 		return out;

@@ -129,4 +129,22 @@ public class AnthropicConnectionTest extends TestCase
 		assertTrue(AnthropicConnection.isRefusal(a));
 		assertFalse(AnthropicConnection.isRefusal(parse("{\"stop_reason\":\"end_turn\"}")));
 	}
+
+	public void testStringToolChoiceValuesMap()
+	{
+		// Test "auto" string value
+		JSONObject inAuto = parse("{\"model\":\"m\",\"messages\":[{\"role\":\"user\",\"content\":\"x\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"pick\",\"parameters\":{\"type\":\"object\"}}}],\"tool_choice\":\"auto\"}");
+		JSONObject outAuto = AnthropicConnection.toAnthropicRequest(inAuto);
+		assertEquals("auto", ((JSONObject) outAuto.get("tool_choice")).get("type"));
+
+		// Test "required" string value
+		JSONObject inRequired = parse("{\"model\":\"m\",\"messages\":[{\"role\":\"user\",\"content\":\"x\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"pick\",\"parameters\":{\"type\":\"object\"}}}],\"tool_choice\":\"required\"}");
+		JSONObject outRequired = AnthropicConnection.toAnthropicRequest(inRequired);
+		assertEquals("any", ((JSONObject) outRequired.get("tool_choice")).get("type"));
+
+		// Test "none" string value (key should be absent)
+		JSONObject inNone = parse("{\"model\":\"m\",\"messages\":[{\"role\":\"user\",\"content\":\"x\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"pick\",\"parameters\":{\"type\":\"object\"}}}],\"tool_choice\":\"none\"}");
+		JSONObject outNone = AnthropicConnection.toAnthropicRequest(inNone);
+		assertFalse(outNone.containsKey("tool_choice"));
+	}
 }
