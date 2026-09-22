@@ -202,7 +202,7 @@ public class EnterMediaObject implements CatalogEnabled
 		return (PathEventManager) getModuleManager().getBean(catalogid, "pathEventManager");
 	}
 
-	public Searcher loadSearcher(WebPageRequest inReq) throws Exception
+	public Searcher loadSearcher(WebPageRequest inReq)
 	{
 		String fieldname = inReq.findPathValue("searchtype");
 		if (fieldname == null)

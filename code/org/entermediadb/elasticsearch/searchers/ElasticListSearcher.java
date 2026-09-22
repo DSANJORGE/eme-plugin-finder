@@ -146,11 +146,12 @@ public class ElasticListSearcher extends BaseElasticSearcher implements Reloadab
 		updateIndex(toindex, null);
 		flushChanges();
 
-		Page defaults = getPageManager().getPage("/" + getCatalogId() + "/list/" + getSearchType() + ".csv");
+		Page defaults = getPageManager().getPage("/" + getCatalogId() + "/data/lists/" + getSearchType() + ".csv");
 		if( defaults.exists())		
 		{
 			//I want to read in CSV files from the catalog/list/*.csv from ElasticListSearcher.reindexXml it should look for a csv file in the same way it looks for an xml file. We can use our standard CSV import tool: 
 			CsvImporter csvimporter = (CsvImporter)getModuleManager().getBean(getCatalogId(),"csvImporter",false);	
+			csvimporter.setSearcher(this);
 			csvimporter.setImportPage(defaults);
 			ScriptLogger logger = new ScriptLogger();
 			csvimporter.setLog(logger);

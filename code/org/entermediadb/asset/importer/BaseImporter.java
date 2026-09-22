@@ -174,7 +174,7 @@ public class BaseImporter extends EnterMediaObject
 	{
 		try
 		{
-			fieldSearcher = loadSearcher(context);
+			
 
 			if (fieldImportPage == null)
 			{
@@ -265,7 +265,7 @@ public class BaseImporter extends EnterMediaObject
 					data.add(target);
 					if (data.size() == 3000)
 					{
-						getSearcher().saveAllData(data, context.getUser());
+						getSearcher().saveAllData(data, null);
 						log.info("imported 3000");
 						data.clear();
 					}
@@ -277,7 +277,7 @@ public class BaseImporter extends EnterMediaObject
 				FileUtils.safeClose(reader);
 				getPageManager().removePage(getImportPage());
 			}
-			getSearcher().saveAllData(data, context.getUser());
+			getSearcher().saveAllData(data, null);
 			log.info("imported " + rowNum);
 			importTotal = rowNum;
 		}
