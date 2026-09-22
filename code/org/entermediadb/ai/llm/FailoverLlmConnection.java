@@ -268,7 +268,7 @@ public class FailoverLlmConnection implements LlmConnection
 				for (Object id : ids)
 				{
 					Entry entry = entryFor(String.valueOf(id));
-					if (entry != null && !Boolean.parseBoolean(entry.server.get("disabled")))
+					if (entry != null && !Boolean.parseBoolean(entry.server.get("disabled")) && !chain.contains(entry))
 					{
 						chain.add(entry);
 					}
@@ -319,7 +319,7 @@ public class FailoverLlmConnection implements LlmConnection
 		{
 			Entry entry = chain.get(i);
 			long now = System.currentTimeMillis();
-			int attempt = i + 1;
+			int attempt = i + 1; // chain position, not the count of servers actually called: a breakeropen skip still advances this
 			if (!shouldTry(chain, i, now))
 			{
 				if (entry.connection != null)
@@ -330,19 +330,14 @@ public class FailoverLlmConnection implements LlmConnection
 			}
 			String status = "error";
 			String error = "empty response";
+			LlmResponse response = null;
 			try
 			{
 				if (entry.connection instanceof BaseLlmConnection)
 				{
 					((BaseLlmConnection) entry.connection).setTimeoutOverride(timeout);
 				}
-				LlmResponse response = inCall.run(entry.connection);
-				if (response != null && (response.getRawResponse() != null || response.getRawCollection() != null))
-				{
-					entry.succeeded();
-					logAttempt(entry.server, inWhat, "ok", System.currentTimeMillis() - now, attempt, null, response);
-					return response;
-				}
+				response = inCall.run(entry.connection);
 			}
 			catch (Exception ex)
 			{
@@ -357,17 +352,26 @@ public class FailoverLlmConnection implements LlmConnection
 					((BaseLlmConnection) entry.connection).setTimeoutOverride(null);
 				}
 			}
+			// The breaker window is armed from when the attempt actually ended, not when it started: a route
+			// timeout close to (or above) breakerminutes would otherwise open a window already in the past.
+			long ended = System.currentTimeMillis();
+			if (response != null && (response.getRawResponse() != null || response.getRawCollection() != null))
+			{
+				entry.succeeded();
+				logAttempt(entry.server, inWhat, "ok", ended - now, attempt, null, response);
+				return response;
+			}
 			lastReason = error.split("\n")[0].trim();
 			if (lastReason.length() > 120)
 			{
 				lastReason = lastReason.substring(0, 120) + "...";
 			}
-			logAttempt(entry.server, inWhat, status, System.currentTimeMillis() - now, attempt, error, null);
-			if (entry.failed(now))
+			logAttempt(entry.server, inWhat, status, ended - now, attempt, error, null);
+			if (entry.failed(ended))
 			{
 				log.info("llm " + fieldServerType + ": breaker open for " + entry.getId() + " until " + new Date(entry.openUntil));
 			}
-			Entry next = nextToTry(chain, i + 1, now);
+			Entry next = nextToTry(chain, i + 1, ended);
 			if (next != null)
 			{
 				log.info("llm " + fieldServerType + ": " + entry.getId() + " failed (" + lastReason + ") -> trying " + next.getId());

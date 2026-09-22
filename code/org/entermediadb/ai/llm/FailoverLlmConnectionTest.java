@@ -5,9 +5,7 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Deque;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import org.entermediadb.ai.AgentContext;
 import org.entermediadb.ai.llm.openai.OpenAiResponse;
@@ -79,7 +77,6 @@ public class FailoverLlmConnectionTest extends TestCase
 	Data serverA;
 	Data serverB;
 	Data routeRow;
-	Map<String, Data> extraServers = new HashMap<String, Data>();
 	List<String> logged = new ArrayList<String>();
 
 	protected Data server(String inId, String inFailures, String inMinutes)
@@ -99,6 +96,7 @@ public class FailoverLlmConnectionTest extends TestCase
 		serverB = server("b", "3", "5");
 		a.setAiServerData(serverA);
 		b.setAiServerData(serverB);
+		routeRow = null;
 	}
 
 	protected String text(LlmResponse inResponse)
@@ -147,10 +145,21 @@ public class FailoverLlmConnectionTest extends TestCase
 		assertEquals(Arrays.asList("a:error", "b:ok"), logged);
 
 		logged.clear();
+		BaseData route = new BaseData();
+		route.setId("fn");
+		route.setValue("aiservers", Arrays.asList("a", "b"));
+		route.setValue("timeoutseconds", "7");
+		routeRow = route;
+
 		a.then("timeout");
 		b.then("otra vez b");
 		assertEquals("otra vez b", text(router(serverA, serverB).callStructure(null, "fn")));
 		assertEquals(Arrays.asList("a:timeout", "b:ok"), logged);
+		// The override is cleared in a finally, so it comes off both the failed attempt and the one that succeeds.
+		assertEquals(Integer.valueOf(7), a.observedTimeoutSeconds);
+		assertEquals(Integer.valueOf(7), b.observedTimeoutSeconds);
+		assertEquals(30, a.getTimeoutSeconds());
+		assertEquals(30, b.getTimeoutSeconds());
 	}
 
 	public void testEmptyReplyFailsOver()
@@ -247,6 +256,19 @@ public class FailoverLlmConnectionTest extends TestCase
 		assertEquals("desde a", text(router(serverA, serverB).callStructure(null, "fn")));
 		assertEquals(0, b.calls);
 		assertEquals(Arrays.asList("a:ok"), logged);
+
+		// A duplicated id is tried once, not twice: it must not cost a single call two breaker failures.
+		logged.clear();
+		serverB.setValue("disabled", null);
+		BaseData dupeRoute = new BaseData();
+		dupeRoute.setId("fn");
+		dupeRoute.setValue("aiservers", Arrays.asList("a", "a", "b"));
+		routeRow = dupeRoute;
+
+		a.then(new RuntimeException("LLM HTTP 500 from x: boom"));
+		b.then("desde b");
+		assertEquals("desde b", text(router(serverA, serverB).callStructure(null, "fn")));
+		assertEquals(Arrays.asList("a:error", "b:ok"), logged);
 	}
 
 	public void testRouteWithNoUsableIdsFallsBackToLadder()
