@@ -2582,6 +2582,18 @@
 		</property>
 	</bean>
 
+	<bean id="anthropicConnection" class="org.entermediadb.ai.llm.anthropic.AnthropicConnection" scope="prototype">
+		<property name="moduleManager">
+			<ref bean="moduleManager" />
+		</property>
+		<property name="requestUtils">
+			<ref bean="requestUtils" />
+		</property>
+		<property name="pageManager">
+			<ref bean="pageManager" />
+		</property>
+	</bean>
+
 	<bean id="llamaOpenAiConnection" class="org.entermediadb.ai.llm.llama.LlamaOpenAiConnection" scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
