@@ -7,7 +7,7 @@ public class EMediaAIResponse extends BasicLlmResponse
 
 	public String getFileName()
 	{
-		return getRunSkillEnabled();
+		return getExecAutomationSkill();
 	}
 
 	protected boolean isToolCall;

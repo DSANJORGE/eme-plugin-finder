@@ -55,7 +55,17 @@ public class ThemeModule extends BaseMediaModule
 		{
 			Data theme = (Data) iterator.next();
 
-			String inputfile = theme.get("templatecss");
+			setTheme(inReq, theme);
+
+		}
+	}
+
+	public  void setTheme(WebPageRequest inReq, Data theme) throws UnsupportedEncodingException
+	{
+		MediaArchive archive = getMediaArchive(inReq);
+		String appid = inReq.findValue("applicationid");
+
+		String inputfile = theme.get("templatecss");
 			if (inputfile == null)
 			{
 				inputfile = "/${applicationid}/theme/styles/overridestemplate.css";
@@ -92,8 +102,6 @@ public class ThemeModule extends BaseMediaModule
 			{
 				log.error("Error saving theme css", e);
 			}
-
-		}
 	}
 
 	public void saveLogo(WebPageRequest inReq) throws Exception
@@ -114,20 +122,25 @@ public class ThemeModule extends BaseMediaModule
 				Page logopage = archive.getOriginalDocument(logoasset);
 				if (logopage != null)
 				{
-					Page destpage = getPageManager().getPage("/" + applicationid + "/" + theme.getId() + "/logo.png");
+					Page destpage = getPageManager().getPage("/" + applicationid + "/theme/" + theme.getId() + "/logo.png");
 					if (!destpage.getPath().equals(logopage.getPath()))
 					{
 						getPageManager().copyPage(logopage, destpage);
-						Dimension assetdimension = archive.getAssetImporter().getAssetUtilities().getImageDimensionImageIO(logopage.getContentItem());
-						if (assetdimension.width > 0)
-						{
-							theme.setValue("logowidth", assetdimension.width);
-						}
-						if (assetdimension.height > 0)
-						{
-							theme.setValue("logoheight", assetdimension.height);
 
+						if (theme.get("logowidth") == null) 
+						{
+							Dimension assetdimension = archive.getAssetImporter().getAssetUtilities().getImageDimensionImageIO(logopage.getContentItem());
+							if (assetdimension.width > 0)
+							{
+								theme.setValue("logowidth", assetdimension.width);
+							}
+							if (assetdimension.height > 0)
+							{
+								theme.setValue("logoheight", assetdimension.height);
+
+							}
 						}
+						
 						archive.saveData("theme", theme);
 					}
 
@@ -192,6 +205,11 @@ public class ThemeModule extends BaseMediaModule
 		{
 			themeid = "theme";
 		}
+		//legacy theme id "theme"
+		if (themeid.equals("theme"))
+		{
+			themeid = "defaulttheme";
+		}
 		Data theme = archive.getCachedData("theme", themeid);
 		if (theme != null)
 		{
@@ -203,10 +221,27 @@ public class ThemeModule extends BaseMediaModule
 		inReq.putPageValue("themeprefix", "/" + appid + "/" + themeid);
 	}
 
+	public void loadDefaultTheme(WebPageRequest inReq)
+	{
+		MediaArchive archive = getMediaArchive(inReq);
+
+		String themeid = null;
+		themeid = inReq.findPathValue("themeid");
+		Data theme = archive.getCachedData("theme", themeid);
+		if (theme != null)
+		{
+			inReq.putPageValue("defaulttheme", theme);
+		}
+	}
+
 	public void changeTheme(WebPageRequest inReq)
 	{
 		String appid = inReq.findValue("applicationid");
 		String themeid = inReq.getRequestParameter("themeid");
+		if (themeid == null || themeid.isEmpty())
+		{
+			return;
+		}
 		PageSettings xconf = getPageManager().getPageSettingsManager().getPageSettings("/" + appid + "/_site.xconf");
 
 		xconf.setProperty("themeid", themeid);
@@ -215,8 +250,10 @@ public class ThemeModule extends BaseMediaModule
 
 		try
 		{
-
-			saveAllCustomThemes(inReq);
+			MediaArchive archive = getMediaArchive(inReq);
+			Data theme = archive.getData("theme", themeid);
+			inReq.putPageValue("defaulttheme", theme);
+			setTheme(inReq, theme);
 		}
 		catch (Exception e)
 		{

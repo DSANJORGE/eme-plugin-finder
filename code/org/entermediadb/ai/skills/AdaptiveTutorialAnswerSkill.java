@@ -59,8 +59,10 @@ public class AdaptiveTutorialAnswerSkill extends AdaptiveTutorialBaseSkill
 		Searcher searcher = getMediaArchive().getSearcher("tutoranswer");
 		String userid = tutorMessageContext.getUserProfile().getUser().getId();
 		boolean iscorrect;
-		// TestU learning engine v1: the app stores the answer first through services/testu/learn/answer.json, which
-		// verifies mode, scope, hierarchy and hint level, then sends only its id here for the tutor's feedback.
+		// TestU learning engine v1: the app stores the answer first through
+		// services/testu/learn/answer.json, which
+		// verifies mode, scope, hierarchy and hint level, then sends only its id here for the tutor's
+		// feedback.
 		Object answerid = tutorMessageContext.getContextValue("answerid");
 		if (answerid != null && !answerid.toString().trim().isEmpty())
 		{
@@ -110,7 +112,8 @@ public class AdaptiveTutorialAnswerSkill extends AdaptiveTutorialBaseSkill
 			answer.setValue("user", userid);
 			answer.setValue("datecreated", new Date());
 			answer.setValue("lastpenalty", new Date());
-			// Not verified by answer.json (older app builds): stored as legacy, which never advances the learning sequence.
+			// Not verified by answer.json (older app builds): stored as legacy, which never advances the
+			// learning sequence.
 			// Client-sent mode, scope and hint level are ignored.
 			answer.setValue("mode", "legacy");
 

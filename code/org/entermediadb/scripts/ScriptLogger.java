@@ -1,8 +1,10 @@
 package org.entermediadb.scripts;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.logging.Handler;
 import java.util.logging.LogRecord;
 import java.util.logging.Logger;
@@ -17,6 +19,34 @@ public class ScriptLogger extends Handler
 	protected String fieldPrefix = "";
 	protected TextAppender fieldTextAppender;
 	protected boolean fieldAppendLogs;
+	protected Collection<LogListener> fieldLogListeners;
+
+	public Collection<LogListener> getLogListeners()
+	{
+		if (fieldLogListeners == null)
+		{
+			fieldLogListeners = new CopyOnWriteArrayList<LogListener>();
+		}
+		return fieldLogListeners;
+	}
+
+	public void addLogListener(LogListener inListener)
+	{
+		getLogListeners().add(inListener);
+	}
+
+	public void removeLogListener(LogListener inListener)
+	{
+		getLogListeners().remove(inListener);
+	}
+
+	protected void fireLog(String inType, String inText, Throwable inEx)
+	{
+		for (LogListener listener : getLogListeners())
+		{
+			listener.handleLog(inType, inText, inEx);
+		}
+	}
 
 	public TextAppender getTextAppender()
 	{
@@ -45,6 +75,7 @@ public class ScriptLogger extends Handler
 			{
 				log.info(getPrefix() + " " + intype + " " + text);
 			}
+		fireLog(intype, text, ex);
 		if (!fieldAppendLogs)
 		{
 			return;

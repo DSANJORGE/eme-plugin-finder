@@ -2,8 +2,8 @@
 	--html-track: #444;
 	--html-thumb: #aaa;
 	--default-text: #333;
-	--muted-text: #888;
 	--secondary-text: #666;
+	--muted-text: #999;
 	--text-link-color: #3cb371;
 	--dark-bg: #252525;
 	--light-bg: #fff;
@@ -39,6 +39,7 @@
 html.lighttheme {
 	--html-track: #fff;
 	--html-thumb: #aaa;
+	--default-text: #555;
 	--scroll-track: #fff;
 	--scroll-thumb: #cfcfcf;
 	--raised-shadow:
@@ -518,11 +519,6 @@ button[type="submit"] {
 
 .popover .popover-header {
 	margin: 0;
-}
-
-.emfinderapp,
-p.info {
-	color: #444;
 }
 
 .site-switcher {
@@ -2887,6 +2883,7 @@ a.col-resize i {
 
 .sidebar-togglers-bar {
 	width: 32px;
+	border-right: 1px solid var(--light-border);
 	position: absolute;
 	top: 0;
 	left: 0;
@@ -2938,7 +2935,7 @@ a.col-resize i {
 	color: var(--default-text);
 }
 
-.sidebar-selected.contrast .sidebar-toggler-show {
+.Xsidebar-selected.contrast .sidebar-toggler-show {
 	color: #fff;
 	background: #666;
 }
@@ -6178,14 +6175,12 @@ li.add {
 	border: 1px solid #6663;
 }
 
-.settings-table .sectionlevel {
-	background: #333 !important;
-}
-
 .settings-table .sectionlevel td {
+	color: var(--themed-navbar-secondary-text);
+    background: var(--themed-navbar-secondary);
 	font-size: 1rem;
 	font-weight: bold;
-	padding: 4px 8px;
+	padding: 6px 10px;
 }
 
 .settings-table td {
@@ -7163,7 +7158,7 @@ a.collectionlike {
 
 .categorypathpicker .categorypath {
 	padding: 0.15rem 0.35rem;
-	border-bottom: 1px solid #f3f3f3;
+	border-bottom: 1px solid var(--light-border);
 }
 
 .categorypathpicker .pickcategorylink {
@@ -8357,8 +8352,8 @@ a.bg-brand-dark:hover {
 }
 
 .btn-wide i {
-	font-size: 1.5rem;
-	margin-bottom: 5px;
+	font-size: 1.3rem;
+	margin-bottom: 2px;
 }
 
 .btn-brand:focus,
@@ -8366,6 +8361,10 @@ a.bg-brand-dark:hover {
 .btn-wide:focus,
 .btn-wide:active {
 	box-shadow: none;
+}
+
+.btn-wide .small i {
+	font-size: 0.75rem;
 }
 
 .btn-navbar {

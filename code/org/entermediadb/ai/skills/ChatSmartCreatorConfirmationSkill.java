@@ -45,10 +45,10 @@ public class ChatSmartCreatorConfirmationSkill extends BaseSkill
 		}
 
 		// Adjust the outline as needed using regular AI
-		messageContext.addContext("proposedoutline", instructions.getProposedSections());
+		messageContext.put("proposedoutline", instructions.getProposedSections());
 		Data usermessage = getMediaArchive().getCachedData("chatterbox", messageContext.getAgentMessage().get("replytoid"));
 		String prompt = usermessage.get("message");
-		messageContext.addContext("confirmationprompt", prompt);
+		messageContext.put("confirmationprompt", prompt);
 
 		LlmResponse res = llmconnection.callStructure(messageContext, "smartcreator_confirmoutline");
 
@@ -59,15 +59,15 @@ public class ChatSmartCreatorConfirmationSkill extends BaseSkill
 
 		boolean wasadjusted = (boolean) updatedSectionsJson.get("changed");
 
-		messageContext.addContext("changed", wasadjusted);
+		messageContext.put("changed", wasadjusted);
 
 		if (wasadjusted)
 		{
-			messageContext.addContext("proposedoutline", instructions.getProposedSections());
+			messageContext.put("proposedoutline", instructions.getProposedSections());
 
 			// Render the updated outline for confirmation
 			res.setOperationState("runskill");
-			res.setRunSkillEnabled("chat_smartcreator_renderoutline");
+			res.setExecAutomationSkill("chat_smartcreator_renderoutline");
 			messageContext.setLastResponse(res);
 
 			// AutomationStep skillEnabled = messageContext.getCurrentAgentEnable();
@@ -89,34 +89,11 @@ public class ChatSmartCreatorConfirmationSkill extends BaseSkill
 
 			initConfirmedSections(instructions);
 
-			// messageContext.addContext("confirmedoutline", instructions.getConfirmedSections());
-			messageContext.addContext("playbackentity", instructions.getTargetEntity());
-			messageContext.addContext("playbackentitymodule", instructions.getTargetModule());
+			// messageContext.put("confirmedoutline", instructions.getConfirmedSections());
+			messageContext.put("playbackentity", instructions.getTargetEntity());
+			messageContext.put("playbackentitymodule", instructions.getTargetModule());
 			super.process(messageContext);
 
-			/*
-			 * String step2CreatePrompt = instructions.getStepContentCreate(); BasicLlmResponse step2response =
-			 * null; if (step2CreatePrompt != null && !step2CreatePrompt.isEmpty()) { // Create the content //
-			 * step2response = new BasicLlmResponse(); //
-			 * step2response.setNextSkillEnabled("smartcreator_createsectioncontents"); //already in the //
-			 * pipeline // messageContext.setLastResponse(step2response); super.process(messageContext); // To
-			 * Create sections } else { // Show the outline again instead step2response = new
-			 * BasicLlmResponse(); step2response.setNextSkillEnabled("smartcreator_renderoutline");
-			 * messageContext.setLastResponse(step2response);
-			 * 
-			 * /* messageContext.addContext("confirmedoutline", instructions.getConfirmedSections());
-			 * 
-			 * messageContext.addContext("playbackentity", instructions.getTargetEntity());
-			 * messageContext.addContext("playbackentitymodule", instructions.getTargetModule());
-			 * 
-			 * llmconnection = getMedia Archive().getLlmConnection("smartcreator_renderoutline"); res =
-			 * llmconnection.renderLocalAction(messageContext, "smartcreator_renderoutline");
-			 * messageContext.setWaitTime(null); // final interaction, no next steps. What is the next function?
-			 * messageContext.setLastResponse(res);
-			 * 
-			 * }
-			 * 
-			 */
 			return res;
 		}
 	}

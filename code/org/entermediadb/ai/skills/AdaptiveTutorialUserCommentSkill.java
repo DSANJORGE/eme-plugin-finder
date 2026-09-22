@@ -180,7 +180,12 @@ public class AdaptiveTutorialUserCommentSkill extends AdaptiveTutorialBaseSkill
 				{
 					sent.put(question.get("sourcecite"), question.get("sourcequote"));
 					sent.put(question.get("sourcecite") + "|" + question.get("sourcepage"), question.get("sourcequote"));
-					qb.append("Source of the question [").append(question.get("sourcecite")).append(question.get("sourcepage") == null ? "" : ", p. " + question.get("sourcepage")).append("]: ").append(question.get("sourcequote") == null ? "" : question.get("sourcequote")).append("\n");
+					qb.append("Source of the question [")
+						.append(question.get("sourcecite"))
+						.append(question.get("sourcepage") == null ? "" : ", p. " + question.get("sourcepage"))
+						.append("]: ")
+						.append(question.get("sourcequote") == null ? "" : question.get("sourcequote"))
+						.append("\n");
 				}
 				prompt = qb + "\n" + prompt;
 			}
@@ -239,7 +244,8 @@ public class AdaptiveTutorialUserCommentSkill extends AdaptiveTutorialBaseSkill
 			if (!message.contains(">>"))
 			{
 				// The app renders the ">> ..." lines as follow-up chips; llamat sometimes omits them.
-				message = message + "\n\n>> " + ("evaluation".equals(mode) ? "¿Quieres que te explique cómo funciona esta pregunta?" : question != null ? "¿Quieres que te explique la pregunta en juego?" : "¿Quieres que te explique algún punto de esta lección?");
+				message = message + "\n\n>> " + ("evaluation".equals(mode) ? "¿Quieres que te explique cómo funciona esta pregunta?"
+					: question != null ? "¿Quieres que te explique la pregunta en juego?" : "¿Quieres que te explique algún punto de esta lección?");
 			}
 			// The RAG path gets the passage and its boxes from the embedding server's
 			// sources; here the tutor wrote the citation itself, so look the page up.
@@ -361,14 +367,14 @@ public class AdaptiveTutorialUserCommentSkill extends AdaptiveTutorialBaseSkill
 	}
 
 	/**
-	 * TestU local patch: the verbatim passage and its page boxes for a citation the tutor wrote
-	 * itself. The embedding-server path builds these from its sources (citeFromSources); the
-	 * local-excerpt path has no sources, so the cited page is looked up here and the same
-	 * `> passage` and `[[hl x,y,w,h;...]]` lines are appended. "" when the citation names no page
-	 * this tutorial holds, or the passage is not found on it (video citations carry no boxes).
-	 * The passage is picked from what the model read under that heading (inSent, "Title|N" to the
-	 * excerpt sent) — a page re-scan quoted the "decálogo" intro of a page cited for its sentence
-	 * on two-step verification (2026-09-21); the on-screen page is sent whole, so it scans as before.
+	 * TestU local patch: the verbatim passage and its page boxes for a citation the tutor wrote itself.
+	 * The embedding-server path builds these from its sources (citeFromSources); the local-excerpt path
+	 * has no sources, so the cited page is looked up here and the same `> passage` and `[[hl
+	 * x,y,w,h;...]]` lines are appended. "" when the citation names no page this tutorial holds, or the
+	 * passage is not found on it (video citations carry no boxes). The passage is picked from what the
+	 * model read under that heading (inSent, "Title|N" to the excerpt sent) — a page re-scan quoted the
+	 * "decálogo" intro of a page cited for its sentence on two-step verification (2026-09-21); the
+	 * on-screen page is sent whole, so it scans as before.
 	 */
 	protected String quoteForCitation(String inTutorialId, String inAnswer, String inQuery, Map<String, String> inSent)
 	{
@@ -569,13 +575,19 @@ public class AdaptiveTutorialUserCommentSkill extends AdaptiveTutorialBaseSkill
 	/** `[Title, p. N]` as the tutor writes it; video citations (`[Title, m:ss]`) carry no boxes. */
 	private static final java.util.regex.Pattern PAGECITE = java.util.regex.Pattern.compile("\\[([^\\[\\]]+?),\\s*p\\.?\\s*(\\d+)\\]");
 
-	/** Any citation, page or video: group 1 the title, group 2 the page (null for `m:ss`). Leading blanks included, like BADCITE. */
+	/**
+	 * Any citation, page or video: group 1 the title, group 2 the page (null for `m:ss`). Leading
+	 * blanks included, like BADCITE.
+	 */
 	private static final java.util.regex.Pattern ANYCITE = java.util.regex.Pattern.compile("[ \\t]*\\[([^\\[\\]\\n]+?),\\s*(?:p\\.?\\s*(\\d+)|\\d+:\\d\\d)\\]");
 
 	/** In a past reply: a `> quote` or `[[hl …]]` line (not a `>>` follow-up), or any citation. */
 	private static final java.util.regex.Pattern STALECITE = java.util.regex.Pattern.compile("(?m)^(?:> |\\[\\[hl ).*$\\n?|[ \\t]*\\[[^\\[\\]\\n]+?,\\s*(?:p\\.?\\s*\\d+|\\d+:\\d\\d)\\]");
 
-	/** A single bracket group that is not a `[Title, p. N]` / `[Title, m:ss]` citation (never a `[[hl` box). */
+	/**
+	 * A single bracket group that is not a `[Title, p. N]` / `[Title, m:ss]` citation (never a `[[hl`
+	 * box).
+	 */
 	private static final java.util.regex.Pattern BADCITE = java.util.regex.Pattern.compile("[ \\t]*(?<!\\[)\\[(?!\\[)(?![^\\]\\n]+,\\s*(p\\.\\s*\\d+|\\d+:\\d\\d)\\])[^\\[\\]\\n]*\\](?!\\])");
 
 	/**
@@ -701,8 +713,8 @@ public class AdaptiveTutorialUserCommentSkill extends AdaptiveTutorialBaseSkill
 	/**
 	 * ponytail: plural fold only ("proveedores" = "proveedor"), what the index's English snowball does
 	 * to Spanish, so a passage matches the words the search engine matched the page on. Upgrade path:
-	 * the searcher's own highlighting (highlight="true" on the field, SearchHitData.getHighlights)
-	 * once description is analysed in Spanish; its 180-char fragments are not passages to read.
+	 * the searcher's own highlighting (highlight="true" on the field, SearchHitData.getHighlights) once
+	 * description is analysed in Spanish; its 180-char fragments are not passages to read.
 	 */
 	private String fold(String inToken)
 	{
@@ -720,7 +732,10 @@ public class AdaptiveTutorialUserCommentSkill extends AdaptiveTutorialBaseSkill
 	 * to the tutorial, split into entityassetpage records with markdowncontent) as prompt text, each
 	 * headed by the document title and page so the tutor can cite it. Empty when nothing matches.
 	 */
-	/** One page of a document as a citable excerpt (its "Title|N" added to inSent), or "" when either id is missing or the page is unknown. */
+	/**
+	 * One page of a document as a citable excerpt (its "Title|N" added to inSent), or "" when either id
+	 * is missing or the page is unknown.
+	 */
 	protected String viewedPage(String inAssetId, String inPage, Map<String, String> inSent)
 	{
 		if (inAssetId == null || inAssetId.isEmpty() || inPage == null || inPage.isEmpty())
@@ -742,10 +757,11 @@ public class AdaptiveTutorialUserCommentSkill extends AdaptiveTutorialBaseSkill
 	}
 
 	/**
-	 * Up to 3 pages of the tutorial's documents most relevant to the queries (the learner's words first,
-	 * then the question's), each recorded in inSent as "Title|N" with the text sent. "" when nothing
-	 * matches. A page longer than the budget is sent as its passages sharing most words with the queries; on
-	 * a video's page each caption cue is a paragraph, its timestamp is what a `m:ss` citation needs.
+	 * Up to 3 pages of the tutorial's documents most relevant to the queries (the learner's words
+	 * first, then the question's), each recorded in inSent as "Title|N" with the text sent. "" when
+	 * nothing matches. A page longer than the budget is sent as its passages sharing most words with
+	 * the queries; on a video's page each caption cue is a paragraph, its timestamp is what a `m:ss`
+	 * citation needs.
 	 */
 	protected String findReferenceExcerpts(String tutorialid, Map<String, String> inSent, String... queries)
 	{
@@ -836,10 +852,9 @@ public class AdaptiveTutorialUserCommentSkill extends AdaptiveTutorialBaseSkill
 	/**
 	 * The passages of inText (~300+ chars: blank-line blocks, their sentences, or the SRT cues of a
 	 * transcript, short ones merged forward) scoring highest on inTerms (folded word to weight), in
-	 * page order, up to inMax chars; the first passages when none scores (the search engine matched
-	 * a stemmed form). The ~4000-char page cost
-	 * ~1000 prompt tokens each, ~2 s of llamat prompt processing per 4K, and buried the passage the
-	 * tutor should quote.
+	 * page order, up to inMax chars; the first passages when none scores (the search engine matched a
+	 * stemmed form). The ~4000-char page cost ~1000 prompt tokens each, ~2 s of llamat prompt
+	 * processing per 4K, and buried the passage the tutor should quote.
 	 */
 	protected String bestParagraphs(String inText, Map<String, Double> inTerms, int inMax)
 	{
@@ -1010,19 +1025,36 @@ public class AdaptiveTutorialUserCommentSkill extends AdaptiveTutorialBaseSkill
 		{
 			return;
 		}
-		inOut.append("Mastery of the learner in the ").append(inScope).append(": ").append(inRow.get("masterypercent")).append("% (band ").append(inRow.get("band")).append("), ")
-			.append(inRow.get("answered")).append(" of ").append(inRow.get("questions")).append(" questions answered, ")
-			.append(inRow.get("certainwrong")).append(" wrong answers given with confidence, ")
-			.append(inRow.get("unsurecorrect")).append(" right answers given unsure.\n");
+		inOut.append("Mastery of the learner in the ")
+			.append(inScope)
+			.append(": ")
+			.append(inRow.get("masterypercent"))
+			.append("% (band ")
+			.append(inRow.get("band"))
+			.append("), ")
+			.append(inRow.get("answered"))
+			.append(" of ")
+			.append(inRow.get("questions"))
+			.append(" questions answered, ")
+			.append(inRow.get("certainwrong"))
+			.append(" wrong answers given with confidence, ")
+			.append(inRow.get("unsurecorrect"))
+			.append(" right answers given unsure.\n");
 	}
 
 	/**
-	 * The last few turns of this channel, oldest first: what the learner asked or answered and what the tutor
-	 * replied, so a follow-up like "¿y por qué?" has its antecedent. Each turn cut to 400 chars.
+	 * The last few turns of this channel, oldest first: what the learner asked or answered and what the
+	 * tutor replied, so a follow-up like "¿y por qué?" has its antecedent. Each turn cut to 400 chars.
 	 */
 	protected String recentConversation(String inChannelId, String inCurrentMessageId)
 	{
-		Collection<Data> rows = getMediaArchive().query("chatterbox").exact("channel", inChannelId).orgroup("functionname", "chat_tutor_usercomment chat_tutor_answer").sort("dateDown").hitsPerPage(7).search().getPageOfHits();
+		Collection<Data> rows = getMediaArchive().query("chatterbox")
+			.exact("channel", inChannelId)
+			.orgroup("functionname", "chat_tutor_usercomment chat_tutor_answer")
+			.sort("dateDown")
+			.hitsPerPage(7)
+			.search()
+			.getPageOfHits();
 		java.util.LinkedList<String> turns = new java.util.LinkedList<String>();
 		JSONParser parser = new JSONParser();
 		for (Data row : rows)

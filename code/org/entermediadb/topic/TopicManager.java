@@ -24,8 +24,10 @@ import org.openedit.util.DateStorageUtil;
 public class TopicManager extends BaseMediaModule
 {
 
-	// Bulk reads below use search() with 1000 hits a page: search(inReq) takes the user profile page size (tens), and
-	// walking ~2000 componentcontent / every tutoranswer row a page at a time cost one ES round trip per page (~4x slower topics.json locally).
+	// Bulk reads below use search() with 1000 hits a page: search(inReq) takes the user profile page
+	// size (tens), and
+	// walking ~2000 componentcontent / every tutoranswer row a page at a time cost one ES round trip
+	// per page (~4x slower topics.json locally).
 	public void getUserTopics(WebPageRequest inReq)
 	{
 		MediaArchive mediaArchive = getMediaArchive(inReq);
@@ -497,7 +499,14 @@ public class TopicManager extends BaseMediaModule
 			}
 			if ("finished".equals(currentchannel.get("channelstatus")))
 			{
-				activechannel = (MultiValued) mediaArchive.query("channel").exact("searchtype", "entitytutorial").exact("dataid", dataid).exact("user", inReq.getUser().getId()).not("testuchat", "true").not("channelstatus", "finished").sort("dateDown").searchOne();
+				activechannel = (MultiValued) mediaArchive.query("channel")
+					.exact("searchtype", "entitytutorial")
+					.exact("dataid", dataid)
+					.exact("user", inReq.getUser().getId())
+					.not("testuchat", "true")
+					.not("channelstatus", "finished")
+					.sort("dateDown")
+					.searchOne();
 			}
 			else
 			{

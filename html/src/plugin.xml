@@ -203,6 +203,10 @@
 		<property name="searcherManager">
 			<ref bean="searcherManager" />
 		</property>
+		<property name="permissionsManager">
+			<ref bean="permissionsManager" />
+		</property>
+
 	</bean>
 
 
@@ -268,6 +272,8 @@
 
 	<bean id="postMail" class="org.entermediadb.email.PostMail">
 		<!-- property name="smtpUsername"> <value>username</value> </property> <property name="smtpPassword"> <value></value> </property -->
+		<!-- <property name="smtpSecured"> <value>false</value> </property> <property name="smtpServer"> <value>localhost</value> </property> -->
+		<!-- property name="port"> <value>25</value> </property -->
 		<property name="pageManager">
 			<ref bean="pageManager" />
 		</property>
@@ -2347,6 +2353,18 @@
 		</property>
 	</bean>
 
+	<bean id="permissionsManager" class="org.entermediadb.users.PermissionManager" scope="prototype">
+		<property name="searcherManager">
+			<ref bean="searcherManager" />
+		</property>
+		<property name="cacheManager">
+			<ref bean="systemCacheManager" />
+		</property>
+		<property name="filterReader">
+			<ref bean="filterReader" />
+		</property>
+	</bean>
+
 
 	<bean id="elementalManager" class="org.entermediadb.elemental.ElementalManager" scope="prototype">
 		<property name="moduleManager">
@@ -2711,6 +2729,12 @@
 		</property>
 	</bean>
 
+	<bean id="mediaCreatorSkill" class="org.entermediadb.ai.skills.MediaCreationSkill" scope="prototype">
+		<property name="moduleManager">
+			<ref bean="moduleManager" />
+		</property>
+	</bean>
+
 	<bean id="agentJobCreatorSkill" class="org.entermediadb.ai.skills.AgentJobCreatorSkill" scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
@@ -2720,6 +2744,21 @@
 	<bean id="agentJobRunnerSkill" class="org.entermediadb.ai.skills.AgentJobRunnerSkill" scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
+		</property>
+	</bean>
+
+	<bean id="agentJobStatusSkill" class="org.entermediadb.ai.skills.AgentJobStatusSkill" scope="prototype">
+		<property name="moduleManager">
+			<ref bean="moduleManager" />
+		</property>
+	</bean>
+
+	<bean id="openCodeRunnerSkill" class="org.entermediadb.ai.skills.OpenCodeRunnerSkill" scope="prototype">
+		<property name="moduleManager">
+			<ref bean="moduleManager" />
+		</property>
+		<property name="exec">
+			<ref bean="exec" />
 		</property>
 	</bean>
 
@@ -2793,6 +2832,12 @@
 	</bean>
 
 	<bean id="chatMonitorResponseSkill" class="org.entermediadb.ai.skills.ChatMonitorResponseSkill" scope="prototype">
+		<property name="moduleManager">
+			<ref bean="moduleManager" />
+		</property>
+	</bean>
+
+	<bean id="markdownToHtmlSkill" class="org.entermediadb.ai.skills.MarkdownToHtmlSkill" scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
@@ -3259,6 +3304,9 @@
 	</bean>
 
 	<bean id="agentjob" class="org.entermediadb.ai.agentjobs.AgentJob" lazy-init="default" scope="prototype">
+		<property name="moduleManager">
+			<ref bean="moduleManager" />
+		</property>
 	</bean>
 
 	<bean id="agentJobOrchestrator" class="org.entermediadb.ai.agentjobs.AgentJobOrchestrator" lazy-init="default" scope="prototype">
@@ -3274,5 +3322,10 @@
 	</bean>
 
 
+	<bean id="handleErrorSkill" class="org.entermediadb.ai.skills.HandleErrorSkill" lazy-init="default" scope="prototype">
+		<property name="moduleManager">
+			<ref bean="moduleManager" />
+		</property>
+	</bean>
 
 </beans>

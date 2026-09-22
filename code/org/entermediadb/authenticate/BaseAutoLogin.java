@@ -94,12 +94,6 @@ public abstract class BaseAutoLogin implements AutoLoginProvider
 					// how many seconds a given cookie should be
 					maxage = Integer.parseInt(age.get("value"));
 				}
-				// A site can pin it in _site.xconf; path value only, never a request parameter.
-				String pageage = inReq.findPathValue("cookie_expiration_age");
-				if (pageage != null && !pageage.isEmpty())
-				{
-					maxage = Integer.parseInt(pageage);
-				}
 				cookie.setMaxAge(maxage);
 				// Needs new servelet api jar
 				// cookie.setHttpOnly(true);

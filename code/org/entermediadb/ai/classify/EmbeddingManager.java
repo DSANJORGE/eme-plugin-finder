@@ -686,7 +686,7 @@ public class EmbeddingManager extends BaseAiManager
 		log.info(" sending to server: " + chatjson.toJSONString());
 
 		LlmResponse response = llmconnection.callJson("/findDocIds", headers, chatjson);
-
+		log.info("Responded");
 		return response;
 	}
 

@@ -28,7 +28,6 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.entermediadb.asset.Asset;
@@ -186,12 +185,16 @@ public class ChatServer
 		inMap.put("date", DateStorageUtil.getStorageUtil().getJsonFormat().format(date));
 		inMap.put("messageid", inData.getId());
 		inMap.put("command", "messagereceived");
+
 		String message = inData.get("messageplain");
+		inMap.put("messageplain", message);
+
 		if (message == null)
 		{
 			message = inData.get("message");
 		}
 		inMap.put("message", message);
+		inMap.put("messagetype", inData.get("messagetype"));
 		inMap.put("agentcontextvalues", inData.get("agentcontextvalues"));
 		broadcastMessage(inCatalogId, inMap);
 	}

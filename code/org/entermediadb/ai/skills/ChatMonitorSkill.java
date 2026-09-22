@@ -5,7 +5,6 @@ import org.apache.commons.logging.LogFactory;
 import org.entermediadb.ai.AgentContext;
 import org.entermediadb.ai.BaseSkill;
 import org.entermediadb.ai.ChatMessageContext;
-import org.entermediadb.ai.automation.RunningScenario;
 import org.entermediadb.ai.llm.AutomationStep;
 import org.entermediadb.ai.llm.LlmConnection;
 import org.entermediadb.ai.llm.LlmResponse;
@@ -26,7 +25,12 @@ public class ChatMonitorSkill extends BaseSkill
 		MultiValued usermessage = (MultiValued) getMediaArchive().getCachedData("chatterbox", agentmessage.get("replytoid"));
 		String query = usermessage.get("message");
 
-		String agentFn = inAgentContext.getCurrentAutomationStep().getAutomationStepData().getId();
+		String functionpath = inAgentContext.getCurrentScenario().getId();
+		String function = inAgentContext.getCurrentAutomationStep().getAutomationStepData().getId();
+
+		functionpath = functionpath + "." + function;
+
+		inAgentContext.put("startup_scenario", functionpath);
 
 		// Move to its own skill, next step is parse text
 		inAgentContext.put("userquery", query);
@@ -38,7 +42,9 @@ public class ChatMonitorSkill extends BaseSkill
 		LlmConnection llmconnection = getMediaArchive().getLlmConnection("thinking");
 
 		LlmResponse response = llmconnection.callToolsFunction(inAgentContext, "chat_monitor");
+
 		log.info(response.getRawResponse());
+		// log.info(JsonOutput.prettyPrint(payload.toJSONString()));
 
 		JSONObject structuredResponse = response.getToolsResponse();
 
@@ -53,7 +59,7 @@ public class ChatMonitorSkill extends BaseSkill
 
 			llmconnection = getMediaArchive().getLlmConnection("localrender");
 			response = llmconnection.renderLocalAction(inAgentContext, "chat_detect_showresponse");
-			response.setNextSkillEnabled("chatMonitor"); // Stay in this skill?
+			response.setNextAutomationStep("chatMonitor"); // Stay in this skill?
 			inAgentContext.setLastResponse(response);
 
 			AutomationStep skillEnabled = messageContext.getCurrentAutomationStep();

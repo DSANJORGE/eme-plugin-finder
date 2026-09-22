@@ -1,5 +1,6 @@
 package org.entermediadb.ai;
 
+import java.util.Collection;
 import org.entermediadb.ai.llm.BaseAgentContext;
 import org.openedit.MultiValued;
 import org.json.simple.JSONObject;
@@ -34,6 +35,12 @@ public class ChatMessageContext extends BaseAgentContext
 	{
 		putContextValue("usermessage", inMessage);
 	}
+
+	public Collection<MultiValued> getChannelChatHistory()
+	{
+		return (Collection<MultiValued>) getContextValue("channelchathistory");
+	}
+
 
 	// public void setTutorialId(String inTutorialId)
 	// {

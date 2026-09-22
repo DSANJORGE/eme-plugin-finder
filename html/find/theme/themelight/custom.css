@@ -1,4 +1,4 @@
-/*Color*/
+/*Light Theme Colors*/
 
 :root {
 	--themed-logo-width: 188px;
@@ -64,6 +64,8 @@
 	
 	--themed-footer:#FFFFFF;
 	--themed-footer-text:#888888;
+
+	--default-text: #555;
 }
 
 #embody {
@@ -87,7 +89,6 @@ position: relative;
 .entityNavBarContainer {
 	
 		
-;
 }
 
 @media (max-width: 768px) {
@@ -113,14 +114,6 @@ position: relative;
 	
 	
 }
-
-
-
-
-
-
-
-
 
 .search-list li.current a.search-href, .sidebar-list li.current a {
 }

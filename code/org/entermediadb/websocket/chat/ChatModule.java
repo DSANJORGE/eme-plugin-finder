@@ -683,7 +683,7 @@ public class ChatModule extends BaseMediaModule
 		{
 			channelname = user.getScreenName();;
 		}
-		else
+		else if( entity != null )
 		{
 			channelname = entity.getName();
 		}
@@ -713,7 +713,7 @@ public class ChatModule extends BaseMediaModule
 		if ("agenttutorchat".equals(channeltype))
 		{
 			currentchannel =
-				(MultiValued) channelsearcher.query().exact("dataid", entity).exact("searchtype", channeldatamodule).exact("user", inReq.getUserName()).not("testuchat", "true").sort("refreshdateDown").searchOne();
+				(MultiValued) channelsearcher.query().exact("dataid", entity).exact("searchtype", channeldatamodule).exact("user", inReq.getUserName()).sort("refreshdateDown").searchOne();
 			return currentchannel;
 		}
 

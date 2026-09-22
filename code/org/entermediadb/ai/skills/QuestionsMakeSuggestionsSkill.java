@@ -72,7 +72,7 @@ public class QuestionsMakeSuggestionsSkill extends BaseSkill
 		}
 		else
 		{
-			response.setRunSkillEnabled("chat_questions_welcome");
+			response.setExecAutomationSkill("chat_questions_welcome");
 		}
 		messageContext.setLastResponse(response);
 		return;

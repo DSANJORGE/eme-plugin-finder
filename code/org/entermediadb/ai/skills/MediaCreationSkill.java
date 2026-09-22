@@ -34,6 +34,49 @@ public class MediaCreationSkill extends BaseSkill
 	public void process(AgentContext inAgentContext)
 	{
 		ChatMessageContext messageContext = (ChatMessageContext) inAgentContext;
+
+		LlmConnection llmconnection = getMediaArchive().getLlmConnection("thinking");
+		LlmResponse response = llmconnection.callStructure(inAgentContext, "creation_image_parse");
+		if (response == null)
+		{
+			log.error("No response from AI for creation_image_parse");
+			log.error(response);
+			return;
+		}
+
+		AiCreation creation = inAgentContext.getAiCreationParams();
+		JSONObject content = response.getResponsePayload();
+		creation.setCreationFields(content);
+		response.setRawMessage("");
+		response.setExecAutomationSkill("creation_image_create");
+		messageContext.setLastResponse(response);
+
+		// LlmResponse result = createImage(inAgentContext);
+		// String assetid = inAgentContext.get("assetid");
+
+		String assetid = "AaAhkPBNO4JkYQUlhlZr";
+
+		Asset asset = getMediaArchive().getAsset(assetid);
+		inAgentContext.addContext("asset", asset); // Get the updated asset
+
+		inAgentContext.addContext("refreshing", "true");
+
+		LlmConnection renderllmconnection = getMediaArchive().getLlmConnection("localrender");
+
+		LlmResponse renderresult = renderllmconnection.renderLocalAction(inAgentContext, "creation_image_render");
+
+		log.info("Next function: " + renderresult.getExecAutomationSkill());
+
+		messageContext.setLastResponse(renderresult);
+		super.process(inAgentContext);
+
+		return;
+
+	}
+
+	public void processX(AgentContext inAgentContext)
+	{
+		ChatMessageContext messageContext = (ChatMessageContext) inAgentContext;
 		String agentFn = messageContext.getCurrentAutomationStep().getEnabledId();
 		if ("creation_image_welcome".equals(agentFn))
 		{
@@ -46,75 +89,52 @@ public class MediaCreationSkill extends BaseSkill
 			LlmConnection llmconnection = getMediaArchive().getLlmConnection("localrender");
 			LlmResponse response = llmconnection.renderLocalAction(inAgentContext, agentFn);
 			// This is for the chat UI to pass it back
-			response.setNextSkillEnabled("creation_image_parse");
+			response.setNextAutomationStep("creation_image_parse");
 			messageContext.setLastResponse(response);
 			return;
 		}
-		else
-			if ("creation_image_parse".equals(agentFn))
+		else if ("creation_image_parse".equals(agentFn))
+		{
+			LlmConnection llmconnection = getMediaArchive().getLlmConnection("thinking");
+			LlmResponse response = llmconnection.callStructure(inAgentContext, agentFn);
+			if (response == null)
 			{
-				LlmConnection llmconnection = getMediaArchive().getLlmConnection("thinking");
-				LlmResponse response = llmconnection.callStructure(inAgentContext, agentFn);
-				if (response == null)
-				{
-					throw new OpenEditException("No results from AI for function: " + agentFn);
-				}
-				AiCreation creation = inAgentContext.getAiCreationParams();
-				JSONObject content = response.getResponsePayload();
-				creation.setCreationFields(content);
-				response.setRawMessage("");
-				response.setRunSkillEnabled("creation_image_create");
-				messageContext.setLastResponse(response);
-				return;
+				throw new OpenEditException("No results from AI for function: " + agentFn);
 			}
-			else
-				if ("creation_image_create".equals(agentFn))
-				{
-					LlmResponse result = createImage(inAgentContext);
-					result.setRunSkillEnabled("creation_image_render");
-					messageContext.setLastResponse(result);
-					return;
-				}
-				else
-					if ("creation_image_render".equals(agentFn))
-					{
-						String assetid = inAgentContext.get("assetid");
+			AiCreation creation = inAgentContext.getAiCreationParams();
+			JSONObject content = response.getResponsePayload();
+			creation.setCreationFields(content);
+			response.setRawMessage("");
+			response.setExecAutomationSkill("creation_image_create");
+			messageContext.setLastResponse(response);
+			return;
+		}
+		else if ("creation_image_create".equals(agentFn))
+		{
+			LlmResponse result = createImage(inAgentContext);
+			result.setExecAutomationSkill("creation_image_render");
+			messageContext.setLastResponse(result);
+			return;
+		}
+		else if ("creation_image_render".equals(agentFn))
+		{
+			String assetid = inAgentContext.get("assetid");
 
-						Asset asset = getMediaArchive().getAsset(assetid);
-						inAgentContext.addContext("asset", asset); // Get the updated asset
+			Asset asset = getMediaArchive().getAsset(assetid);
+			inAgentContext.addContext("asset", asset); // Get the updated asset
 
-						inAgentContext.addContext("refreshing", "true");
+			inAgentContext.addContext("refreshing", "true");
 
-						LlmConnection llmconnection = getMediaArchive().getLlmConnection("localrender");
+			LlmConnection llmconnection = getMediaArchive().getLlmConnection("localrender");
 
-						LlmResponse result = llmconnection.renderLocalAction(inAgentContext, agentFn);
+			LlmResponse result = llmconnection.renderLocalAction(inAgentContext, agentFn);
 
-						log.info("Next function: " + result.getRunSkillEnabled());
+			log.info("Next function: " + result.getExecAutomationSkill());
 
-						messageContext.setLastResponse(result);
-						return;
+			messageContext.setLastResponse(result);
+			return;
 
-					}
-					else
-						if ("creation_entity_create".equals(agentFn))
-						{
-							// This was parsed from AutoDetectManager so app params should be in
-							// agentcontext already
-
-							// TODO: Save the new entity with any foreigh keys
-
-							// SHow the link in the chat
-						}
-		/*
-		 * else if ("createRecord".equals(inAgentContext.getFunctionName())) { MultiValued usermessage =
-		 * (MultiValued)getMediaArchive().getCachedData("chatterbox", inAgentMessage.get("replytoid"));
-		 * 
-		 * LlmResponse result = createRecord(usermessage, inAgentContext);
-		 * 
-		 * return result; }
-		 */
-		throw new OpenEditException("Function not supported " + agentFn);
-
+		}
 	}
 
 	public LlmResponse createImage(AgentContext inAgentContext)
@@ -199,7 +219,7 @@ public class MediaCreationSkill extends BaseSkill
 
 			// inReq.putPageValue("asset", asset);
 			inAgentContext.addContext("asset", asset);
-			results.setRunSkillEnabled("creation_image_render");
+			results.setExecAutomationSkill("creation_image_render");
 			inAgentContext.setValue("assetid", asset.getId());
 			inAgentContext.setValue("wait", 1000);
 			inAgentContext.setLastResponse(results);

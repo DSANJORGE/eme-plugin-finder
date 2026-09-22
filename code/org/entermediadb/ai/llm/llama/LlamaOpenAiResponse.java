@@ -62,7 +62,7 @@ public class LlamaOpenAiResponse extends OpenAiResponse
     }
 
     @Override
-    public String getRunSkillEnabled()
+    public String getExecAutomationSkill()
     {
         if (fieldRunFunctionName != null)
         {

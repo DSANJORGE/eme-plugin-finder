@@ -136,13 +136,7 @@ public class AssistantManager extends BaseAiManager implements SkillStatusListen
 					Runnable runnable = new Runnable() { // Let the user broadcast finish
 						public void run()
 						{
-							// Replies run in parallel across channels; one channel stays in order
-							// (its ChatMessageContext is cached and shared).
-							// ponytail: interned-string lock, a lock map if channel ids stop being short.
-							synchronized (("chatchannel:" + channel.getId()).intern())
-							{
-								respondToChannel(inLog, channel, mostrecent);
-							}
+							respondToChannel(inLog, channel, mostrecent);
 						}
 					};
 					archive.getExecutorManager().execLater(runnable, 0);
@@ -186,15 +180,14 @@ public class AssistantManager extends BaseAiManager implements SkillStatusListen
 		}
 		Collection<MultiValued> messages = archive.query("chatterbox").exact("channel", inChannel.getId()).sort("dateDown").search();
 		Collection<MultiValued> filtered = loadChannelChatHistory(messages);
-		chatMessageContext.putContextValue("channelchathistory", filtered);
+		chatMessageContext.putRoot("channelchathistory", filtered);
 		if (messages.isEmpty())
 		{
 			return chatMessageContext;
 		}
-
 		List<MultiValued> sorted = new ArrayList<>();
 		sorted.addAll(messages);
-		Collections.reverse(sorted);
+		Collections.reverse(sorted); // Newst last
 
 		for (Iterator<MultiValued> iterator = sorted.iterator(); iterator.hasNext();)
 		{
@@ -453,11 +446,15 @@ public class AssistantManager extends BaseAiManager implements SkillStatusListen
 		// HitTracker messages = getMediaArchive().query("chatterbox").exact("channel",
 		// inChannel).sort("dateUp").search();
 
-		Collection<MultiValued> recent = new ArrayList<MultiValued>();
+		List<MultiValued> recent = new ArrayList<MultiValued>();
 
 		for (Iterator<MultiValued> iterator = messages.iterator(); iterator.hasNext();)
 		{
 			MultiValued message = iterator.next();
+			if (message.get("messagetype") == null)
+			{
+				continue;
+			}
 			if ("system".equals(message.get("messagetype")))
 			{
 				continue;
@@ -472,7 +469,7 @@ public class AssistantManager extends BaseAiManager implements SkillStatusListen
 			}
 			recent.add(message);
 		}
-
+		Collections.reverse(recent); // Newest last
 		return recent;
 	}
 
@@ -747,7 +744,7 @@ public class AssistantManager extends BaseAiManager implements SkillStatusListen
 		return manager;
 	}
 
-	public void sendSystemMessage(ChatMessageContext inContext, String inUser, String message, String functionname, String inAgentContextValues)
+	public void sendSystemMessage(ChatMessageContext inContext, String inUser, String message, String functionname)
 	{
 		MediaArchive archive = getMediaArchive();
 
@@ -761,16 +758,9 @@ public class AssistantManager extends BaseAiManager implements SkillStatusListen
 		chat.setValue("chatmessagestatus", "received");
 		chat.setValue("channel", inContext.getChannel().getId());
 		chat.setValue("message", message);
-		chat.setValue("agentcontextvalues", inAgentContextValues);
 
 		archive.saveData("chatterbox", chat);
 		// inReq.putPageValue("chat", chat);
-
-		// monitorChannels only reads channels refreshed in the last hour; an app that keeps
-		// its channel id (TestU) had its questions left "received" forever after an idle hour.
-		Data channel = inContext.getChannel();
-		channel.setValue("refreshdate", new Date());
-		archive.saveData("channel", channel);
 
 		// Fire monitor
 		archive.fireSharedMediaEvent("llm/monitorchats");
@@ -796,7 +786,7 @@ public class AssistantManager extends BaseAiManager implements SkillStatusListen
 				String key = server.get("serverapikey");
 				if (key != null)
 				{
-					connection.addSharedHeader("Authorization", "Bearer " + key);
+					connection.addSharedHeader("Authorization", "Bearer " + server);
 				}
 				long start = System.currentTimeMillis();
 				try
@@ -817,7 +807,7 @@ public class AssistantManager extends BaseAiManager implements SkillStatusListen
 				catch (Exception ex)
 				{
 					inLog.info(address + " had error " + ex);
-					speeds.put(serverroot, -1);
+					speeds.put(serverroot, Integer.MAX_VALUE); // Push back
 					// Ignore
 				}
 			}
@@ -829,7 +819,7 @@ public class AssistantManager extends BaseAiManager implements SkillStatusListen
 			{
 				String serverroot = server.get("serverroot");
 				Integer speed = speeds.get(serverroot);
-				server.setValue("healthms", speed);
+				server.setValue("ordering", speed);
 				tosave.add(server);
 			}
 			getMediaArchive().getSearcher("aiserver").saveAllData(tosave, null);
@@ -1057,7 +1047,8 @@ public class AssistantManager extends BaseAiManager implements SkillStatusListen
 		MultiValued agentmessage = chatMessageContext.getAgentMessage();
 
 		String message = inContext.getMessagePrefix() + processingmessage;
-		agentmessage.setValue("message", message); // setting status
+		agentmessage.setValue("message", message);
+		agentmessage.setValue("messagetype", "status");
 		agentmessage.setValue("functionname", function.getId());
 		getMediaArchive().saveData("chatterbox", agentmessage);
 		ChatServer server = (ChatServer) getMediaArchive().getBean("chatServer");
@@ -1121,7 +1112,7 @@ public class AssistantManager extends BaseAiManager implements SkillStatusListen
 			}
 			else
 			{
-				nextFunctionName = response.getNextSkillEnabled();
+				nextFunctionName = response.getNextAutomationStep();
 			}
 
 			if (nextFunctionName == null)
@@ -1133,22 +1124,13 @@ public class AssistantManager extends BaseAiManager implements SkillStatusListen
 				}
 			}
 
+			//Make functioname be the last functio
+			//and next be the next
 			agentmessage.setValue("functionname", inAutomationStep.getEnabledId());
 			agentmessage.setValue("nextfunctionname", nextFunctionName);
 			agentmessage.setValue("chatmessagestatus", "completed");
 
-			// Prompt scratch (lesson text, excerpts, the built prompt) is per reply: stored, it
-			// bloated every row and loadChatContext replayed it into the next reply's context.
-			String contextjson = inContext.toJSONString();
-			if (inContext instanceof org.entermediadb.ai.llm.BaseAgentContext)
-			{
-				JSONObject slim = ((org.entermediadb.ai.llm.BaseAgentContext) inContext).toJSON();
-				slim.remove("chathistory");
-				slim.remove("referenceexcerpts");
-				slim.remove("learnerprompt");
-				contextjson = slim.toJSONString();
-			}
-			agentmessage.setValue("agentcontextvalues", contextjson);
+			agentmessage.setValue("agentcontextvalues", inContext.toJSONString());
 
 			getMediaArchive().saveData("chatterbox", agentmessage);
 
@@ -1158,13 +1140,6 @@ public class AssistantManager extends BaseAiManager implements SkillStatusListen
 			functionMessageUpdate.put("user", "agent");
 			functionMessageUpdate.put("channel", agentmessage.get("channel"));
 			functionMessageUpdate.put("messageid", agentmessage.getId());
-			// TestU: the app's context_requestid comes back so a reply finds its question; matching
-			// by arrival order shifted every later reply by one after a single lost broadcast.
-			Object requestid = inContext.getContextValue("requestid");
-			if (requestid != null)
-			{
-				functionMessageUpdate.put("replytoid", String.valueOf(requestid));
-			}
 			if (messageplain == null)
 			{
 				messageplain = "New message";
@@ -1186,7 +1161,7 @@ public class AssistantManager extends BaseAiManager implements SkillStatusListen
 
 			JSONObject jsonMessage = new JSONObject(functionMessageUpdate);
 
-			log.info("Broadcasting: " + jsonMessage.toJSONString());
+			// log.info("Broadcasting: " + jsonMessage.toJSONString());
 
 			server.broadcastMessage(jsonMessage);
 
@@ -1196,16 +1171,14 @@ public class AssistantManager extends BaseAiManager implements SkillStatusListen
 			log.error("Error in fireStatusComplete", ex);
 		}
 
-		Long waittime = 200l;
-
 		RunningScenario currentscenario = inContext.getCurrentScenario();
 		if (currentscenario != null)
 		{
 			Long wait = inContext.getWaitTime();
-			if (wait != null && wait instanceof Long)
+			if (wait != null)
 			{
 				inContext.setWaitTime(null);
-				waittime = wait;
+				Long waittime = wait;
 				log.info("Previous function requested to wait " + waittime + " milliseconds");
 				try
 				{
@@ -1217,18 +1190,14 @@ public class AssistantManager extends BaseAiManager implements SkillStatusListen
 					Thread.currentThread().interrupt();
 				}
 			}
-
-			// chatMessageContext.setAgentMessage(agentmessage);
-			// chatMessageContext.setUserMessage(usermessage);
-
-			// String runFunctionName = response.getRunSkillEnabled();
-			// if (runFunctionName != null)
-			// {
-			// MultiValued nextFunction = (MultiValued) archive.getCachedData("aifunction", runFunctionName);
-			// chatMessageContext.setCurrentFunction(nextFunction);
-			// execCurrentFunctionFromChat(chatMessageContext, usermessage, runFunctionName);
-			// }
-			// // Save the current state
+			if( response != null)
+			{
+				String runFunctionName = response.getExecAutomationSkill();
+				if (runFunctionName != null)
+				{
+					currentscenario.runProcess(runFunctionName, inContext);
+				}
+			}
 		}
 	}
 
