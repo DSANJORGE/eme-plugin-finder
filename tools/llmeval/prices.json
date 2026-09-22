@@ -1,0 +1,9 @@
+{
+  "llamat": {"input": 0, "output": 0},
+  "groq": {"input": 0.59, "output": 0.79},
+  "openrouter": {"input": 0.6, "output": 3.0},
+  "together": {"input": 0.88, "output": 0.88},
+  "anthropic": {"input": 5.0, "output": 25.0},
+  "anthropic-sonnet": {"input": 3.0, "output": 15.0},
+  "anthropic-haiku": {"input": 1.0, "output": 5.0}
+}

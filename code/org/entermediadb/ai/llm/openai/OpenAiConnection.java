@@ -6,6 +6,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
+import org.apache.http.util.EntityUtils;
 import org.entermediadb.ai.AgentContext;
 import org.entermediadb.ai.llm.BaseLlmConnection;
 import org.entermediadb.ai.llm.LlmConnection;
@@ -14,7 +15,9 @@ import org.entermediadb.asset.MediaArchive;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.openedit.CatalogEnabled;
+import org.openedit.Data;
 import org.openedit.OpenEditException;
+import org.openedit.data.BaseData;
 import org.openedit.page.Page;
 import org.openedit.util.JSONParser;
 import org.openedit.util.OutputFiller;
@@ -27,6 +30,194 @@ public class OpenAiConnection extends BaseLlmConnection implements CatalogEnable
 	public String getLlmProtocol()
 	{
 		return "openai";
+	}
+
+	// Keys only llama.cpp understands. OpenAI-compatible hosts such as Groq answer 400 "property ... is unsupported"
+	// and Anthropic "Extra inputs are not permitted"; LlamaOpenAiConnection reports protocol "llama" and keeps them,
+	// so one call template serves every provider.
+	protected static final String[] LLAMA_ONLY_KEYS = { "chat_template_kwargs", "cache_prompt", "slot_id", "id_slot", "n_probs", "min_keep" };
+
+	public JSONObject prepareRequest(JSONObject inPayload)
+	{
+		if (!"llama".equals(getLlmProtocol()))
+		{
+			// enable_thinking:false is llama.cpp's "do not reason before answering"; reasoning_effort is the
+			// OpenAI-compatible spelling. Not cosmetic on groq's free tier (8000 tokens/minute), where reasoning
+			// ate three quarters of a classify batch's completion tokens (2026-09-20).
+			Object kwargs = inPayload.get("chat_template_kwargs");
+			if (kwargs instanceof JSONObject && Boolean.FALSE.equals(((JSONObject) kwargs).get("enable_thinking")) && inPayload.get("reasoning_effort") == null)
+			{
+				inPayload.put("reasoning_effort", "low");
+			}
+			for (String key : LLAMA_ONLY_KEYS)
+			{
+				inPayload.remove(key);
+			}
+		}
+		return mergeExtraParams(inPayload);
+	}
+
+	/** Renders /{mediadb}/ai/{protocol}/calls/{function}.json (catalog fallback) and prepares it. */
+	public JSONObject loadCallPayload(AgentContext inContext, String inFunction)
+	{
+		MediaArchive archive = getMediaArchive();
+		inContext.put("model", getModelName());
+		inContext.addContext("aiserver", keylessAiServerData());
+
+		if (inContext.getContextValue("jsonfilename") != null)
+		{
+			inFunction = (String) inContext.getContextValue("jsonfilename");
+		}
+
+		String templatepath = "/" + archive.getMediaDbId() + "/ai/" + getLlmProtocol() + "/calls/" + inFunction + ".json";
+		Page template = archive.getPageManager().getPage(templatepath);
+		if (!template.exists())
+		{
+			templatepath = "/" + archive.getCatalogId() + "/ai/" + getLlmProtocol() + "/calls/" + inFunction + ".json";
+			template = archive.getPageManager().getPage(templatepath);
+		}
+		if (!template.exists())
+		{
+			throw new OpenEditException("Requested Function Does Not Exist in MediaDB or Catalog:" + inFunction);
+		}
+
+		String definition = loadInputFromTemplate(inContext, templatepath);
+		JSONObject payload = (JSONObject) new JSONParser().parse(definition);
+		return prepareRequest(payload);
+	}
+
+	/** The aiserver row as templates may see it: same values, minus the API key. */
+	protected Data keylessAiServerData()
+	{
+		Data server = getAiServerData();
+		if (server == null)
+		{
+			return null;
+		}
+		BaseData copy = new BaseData();
+		copy.setId(server.getId());
+		copy.setProperties(server.getProperties());
+		copy.getProperties().remove("serverapikey");
+		return copy;
+	}
+
+	/**
+	 * One chat/completions round trip. A 429 is retried twice, two seconds apart (groq rate-limits bursts; two
+	 * learners asking at once is enough). Any other non-200 is salvaged when possible, else raised with the
+	 * status and the first 500 chars of the body.
+	 */
+	protected LlmResponse chat(JSONObject inPayload)
+	{
+		log.info("Sent: " + inPayload.toJSONString());
+		HttpPost method = new HttpPost(getServerRoot() + "/chat/completions");
+		method.addHeader("Authorization", "Bearer " + getApiKey());
+		method.setHeader("Content-Type", "application/json");
+		applyLlmHeaders(method, getSharedHeaders());
+		method.setEntity(new StringEntity(inPayload.toJSONString(), StandardCharsets.UTF_8));
+
+		CloseableHttpResponse resp = execute(method);
+		for (int tries = 0; tries < 2 && resp.getStatusLine().getStatusCode() == 429; tries++)
+		{
+			getConnection().release(resp);
+			log.info("Rate limited by " + getServerRoot() + ", retrying");
+			try
+			{
+				Thread.sleep(2000);
+			}
+			catch (InterruptedException e)
+			{
+				Thread.currentThread().interrupt();
+				break;
+			}
+			resp = execute(method);
+		}
+		try
+		{
+			int status = resp.getStatusLine().getStatusCode();
+			if (status != 200)
+			{
+				String body = "";
+				try
+				{
+					body = EntityUtils.toString(resp.getEntity(), StandardCharsets.UTF_8);
+				}
+				catch (Exception ignore)
+				{
+				}
+				JSONObject salvaged = salvageStructure(body, inPayload);
+				if (salvaged != null)
+				{
+					log.info("Salvaged: " + salvaged.toJSONString());
+					LlmResponse salvage = createResponse();
+					salvage.setRawResponse(salvaged);
+					return salvage;
+				}
+				if (body.length() > 500)
+				{
+					body = body.substring(0, 500);
+				}
+				throw new OpenEditException("LLM HTTP " + status + " from " + getServerRoot() + ": " + body);
+			}
+			JSONObject json = (JSONObject) getConnection().parseMap(resp);
+			log.info("Returned: " + json.toJSONString());
+			LlmResponse response = createResponse();
+			response.setRawResponse(json);
+			return response;
+		}
+		finally
+		{
+			getConnection().release(resp);
+		}
+	}
+
+	/**
+	 * The answer inside a groq `json_validate_failed` error body, reshaped as a normal reply: a reasoning model
+	 * (gpt-oss-120b) often writes a good reply and then fails to wrap it in the schema, and groq answers 400 with
+	 * the prose in `failed_generation`. Only a schema with exactly one required property can be filled this way;
+	 * anything else returns null and the caller raises as before.
+	 */
+	protected JSONObject salvageStructure(String inBody, JSONObject inRequest)
+	{
+		try
+		{
+			JSONObject body = (JSONObject) new JSONParser().parse(inBody);
+			JSONObject error = body == null ? null : (JSONObject) body.get("error");
+			if (error == null || !"json_validate_failed".equals(error.get("code")))
+			{
+				return null;
+			}
+			String text = (String) error.get("failed_generation");
+			if (text == null || text.trim().isEmpty())
+			{
+				return null;
+			}
+			JSONObject format = (JSONObject) inRequest.get("response_format");
+			JSONObject schema = format == null ? null : (JSONObject) format.get("json_schema");
+			schema = schema == null ? null : (JSONObject) schema.get("schema");
+			JSONArray required = schema == null ? null : (JSONArray) schema.get("required");
+			if (required == null || required.size() != 1)
+			{
+				return null;
+			}
+			JSONObject content = new JSONObject();
+			content.put(String.valueOf(required.get(0)), text.trim());
+			JSONObject message = new JSONObject();
+			message.put("role", "assistant");
+			message.put("content", content.toJSONString());
+			JSONObject choice = new JSONObject();
+			choice.put("index", Long.valueOf(0));
+			choice.put("message", message);
+			choice.put("finish_reason", "stop");
+			JSONArray choices = new JSONArray();
+			choices.add(choice);
+			JSONObject out = new JSONObject();
+			out.put("choices", choices);
+			return out;
+		}
+		catch (Exception e)
+		{
+			return null;
+		}
 	}
 
 	public LlmResponse runPageAsInput(AgentContext agentcontext, String inTemplate)
@@ -43,7 +234,7 @@ public class OpenAiConnection extends BaseLlmConnection implements CatalogEnable
 
 		method.setEntity(new StringEntity(input, "UTF-8"));
 
-		CloseableHttpResponse resp = getConnection().sharedExecute(method);
+		CloseableHttpResponse resp = execute(method);
 
 		JSONObject json = getConnection().parseMap(resp);
 
@@ -183,7 +374,7 @@ public class OpenAiConnection extends BaseLlmConnection implements CatalogEnable
 
 		log.info("Call Function: " + obj.toJSONString());
 
-		LlmResponse res = callJson("/chat/completions", obj);
+		LlmResponse res = chat(prepareRequest(obj));
 		return res;
 
 	}
@@ -196,73 +387,18 @@ public class OpenAiConnection extends BaseLlmConnection implements CatalogEnable
 
 	public LlmResponse callClassifyFunction(AgentContext inAgentContext, String inFunction, String inBase64Image, String textContent)
 	{
-		MediaArchive archive = getMediaArchive();
-
-		inAgentContext.put("model", getModelName());
-
 		if (textContent != null)
 		{
 			inAgentContext.put("textcontent", textContent);
 		}
-
-		String templatepath = "/" + archive.getMediaDbId() + "/ai/" + getLlmProtocol() + "/calls/" + inFunction + ".json";
-
-		Page template = archive.getPageManager().getPage(templatepath);
-
-		if (!template.exists())
-		{
-			templatepath = "/" + archive.getCatalogId() + "/ai/" + getLlmProtocol() + "/calls/" + inFunction + ".json";
-			template = archive.getPageManager().getPage(templatepath);
-		}
-
-		if (!template.exists())
-		{
-			throw new OpenEditException("Requested Function Does Not Exist in MediaDB or Catalog:" + inFunction);
-		}
-
-		String definition = loadInputFromTemplate(inAgentContext, templatepath);
-
-		JSONParser parser = new JSONParser();
-		JSONObject payload = (JSONObject) parser.parse(definition);
-
-		log.info(payload);
-
+		JSONObject payload = loadCallPayload(inAgentContext, inFunction);
 		attachImageMessage(payload, inBase64Image);
-
-		LlmResponse res = callJson("/chat/completions", payload);
-		return res;
+		return chat(payload);
 	}
 
 	public LlmResponse callToolsFunction(AgentContext params, String inFunction)
 	{
-		MediaArchive archive = getMediaArchive();
-
-		params.put("model", getModelName());
-
-		String templatepath = "/" + archive.getMediaDbId() + "/ai/" + getLlmProtocol() + "/calls/" + inFunction + ".json";
-
-		Page template = archive.getPageManager().getPage(templatepath);
-
-		if (!template.exists())
-		{
-			templatepath = "/" + archive.getCatalogId() + "/ai/" + getLlmProtocol() + "/calls/" + inFunction + ".json";
-			template = archive.getPageManager().getPage(templatepath);
-		}
-
-		if (!template.exists())
-		{
-			throw new OpenEditException("Requested Function Does Not Exist in MediaDB or Catalog:" + inFunction);
-		}
-
-		String definition = loadInputFromTemplate(params, templatepath);
-
-		JSONParser parser = new JSONParser();
-		JSONObject payload = (JSONObject) parser.parse(definition);
-
-		log.info(payload);
-
-		LlmResponse res = callJson("/chat/completions", payload);
-		return res;
+		return chat(loadCallPayload(params, inFunction));
 	}
 
 	public JSONObject attachImageMessage(JSONObject payload, String inBase64Image)
@@ -295,167 +431,7 @@ public class OpenAiConnection extends BaseLlmConnection implements CatalogEnable
 	@Override
 	public LlmResponse callStructure(AgentContext inParams, String inFunctionName)
 	{
-		inParams.put("model", getModelName());
-
-		if (inParams.getContextValue("jsonfilename") != null)
-		{
-			inFunctionName = (String) inParams.getContextValue("jsonfilename");
-		}
-
-		String templatepath = "/" + getMediaArchive().getMediaDbId() + "/ai/" + getLlmProtocol() + "/calls/" + inFunctionName + ".json";
-
-		String inStructure = loadInputFromTemplate(inParams, templatepath);
-
-		JSONParser parser = new JSONParser();
-		JSONObject structureDef = (JSONObject) parser.parse(inStructure);
-
-		stripLlamaExtensions(structureDef);
-
-		log.info("Sent: " + structureDef.toJSONString());
-
-		HttpPost method = new HttpPost(getServerRoot() + "/chat/completions");
-		method.addHeader("Authorization", "Bearer " + getApiKey());
-		method.setHeader("Content-Type", "application/json");
-		method.setEntity(new StringEntity(structureDef.toJSONString(), StandardCharsets.UTF_8));
-
-		log.info("Calling: " + inFunctionName + " on: " + method.getURI() + "");
-
-		CloseableHttpResponse resp = getConnection().sharedExecute(method);
-
-		// TestU local patch: groq rate-limits bursts (two learners asking at once is
-		// enough), and the learner is told IRIS is slow for an answer never attempted.
-		// One retry costs two seconds; a second provider is the routing work's job.
-		for (int tries = 0; tries < 2 && resp.getStatusLine().getStatusCode() == 429; tries++)
-		{
-			getConnection().release(resp);
-			log.info("Rate limited, retrying: " + inFunctionName);
-			try
-			{
-				Thread.sleep(2000);
-			}
-			catch (InterruptedException e)
-			{
-				Thread.currentThread().interrupt();
-				break;
-			}
-			resp = getConnection().sharedExecute(method);
-		}
-
-		try
-		{
-			if (resp.getStatusLine().getStatusCode() != 200)
-			{
-				JSONObject salvaged = salvageStructure(resp, structureDef);
-				if (salvaged == null)
-				{
-					throw new OpenEditException("OpenAI error: " + resp.getStatusLine());
-				}
-				log.info("Salvaged: " + salvaged.toJSONString());
-				LlmResponse salvage = createResponse();
-				salvage.setRawResponse(salvaged);
-				return salvage;
-			}
-
-			JSONObject json = (JSONObject) getConnection().parseMap(resp);
-
-			log.info("Returned: " + json.toJSONString());
-
-			LlmResponse response = createResponse();
-			response.setRawResponse(json);
-			return response;
-		}
-		finally
-		{
-			getConnection().release(resp);
-		}
-	}
-
-	/**
-	 * TestU local patch: `chat_template_kwargs` (enable_thinking) and `id_slot` are llama.cpp server
-	 * extensions. A shared call template carries them for llamat, where enable_thinking false saves
-	 * ~8 s a reply; groq answers 400 "property 'chat_template_kwargs' is unsupported" and anthropic
-	 * "Extra inputs are not permitted", so every template without an openai/ fork failed outright
-	 * (analytics_classify_questions on every mastery run, Diego 2026-09-20). Dropping them here keeps
-	 * one prompt per call instead of a fork per provider; LlamaOpenAiConnection reports protocol
-	 * "llama" and is left untouched.
-	 *
-	 * enable_thinking false is translated rather than dropped: it is llama.cpp's way of saying "do not
-	 * reason before answering", and `reasoning_effort` is the OpenAI-compatible way. It is not cosmetic
-	 * on groq's free tier, where 8000 tokens/minute is the binding limit: a classify batch spent 1380
-	 * of its 1835 completion tokens on reasoning, so five batches exhausted the minute and the rest of
-	 * the run 429'd. Only a template that already asked for thinking off is affected.
-	 */
-	protected void stripLlamaExtensions(JSONObject inRequest)
-	{
-		if ("llama".equals(getLlmProtocol()))
-		{
-			return;
-		}
-		JSONObject kwargs = (JSONObject) inRequest.get("chat_template_kwargs");
-		if (kwargs != null && Boolean.FALSE.equals(kwargs.get("enable_thinking")) && inRequest.get("reasoning_effort") == null)
-		{
-			inRequest.put("reasoning_effort", "low");
-		}
-		inRequest.remove("chat_template_kwargs");
-		inRequest.remove("id_slot");
-	}
-
-	/**
-	 * TestU local patch: the answer inside a `json_validate_failed` error, as if it had come back
-	 * normally. A reasoning model (groq's gpt-oss-120b) writes a good reply often enough and then
-	 * fails to wrap it in the schema; groq answers 400 with the prose in `failed_generation`, so the
-	 * learner saw "IRIS is taking longer than usual" for a reply already written and paid for
-	 * (Diego, 2026-09-20). Only a schema of one required property can be filled this way; anything
-	 * else returns null and the caller throws as before.
-	 */
-	protected JSONObject salvageStructure(CloseableHttpResponse inResponse, JSONObject inRequest)
-	{
-		try
-		{
-			// parseMap throws on a non-200 instead of handing back the body, and the body
-			// is the whole point here, so read the entity directly.
-			String raw = org.apache.http.util.EntityUtils.toString(inResponse.getEntity(), StandardCharsets.UTF_8);
-			JSONObject body = (JSONObject) new JSONParser().parse(raw);
-			JSONObject error = body == null ? null : (JSONObject) body.get("error");
-			if (error == null || !"json_validate_failed".equals(error.get("code")))
-			{
-				// Whatever it is, it is worth reading: the status line alone said nothing.
-				log.info("Not salvageable: " + raw);
-				return null;
-			}
-			String text = (String) error.get("failed_generation");
-			if (text == null || text.trim().isEmpty())
-			{
-				return null;
-			}
-			JSONObject format = (JSONObject) inRequest.get("response_format");
-			JSONObject schema = format == null ? null : (JSONObject) format.get("json_schema");
-			schema = schema == null ? null : (JSONObject) schema.get("schema");
-			JSONArray required = schema == null ? null : (JSONArray) schema.get("required");
-			if (required == null || required.size() != 1)
-			{
-				return null;
-			}
-			JSONObject content = new JSONObject();
-			content.put(String.valueOf(required.get(0)), text.trim());
-			JSONObject message = new JSONObject();
-			message.put("role", "assistant");
-			message.put("content", content.toJSONString());
-			JSONObject choice = new JSONObject();
-			choice.put("index", Long.valueOf(0));
-			choice.put("message", message);
-			choice.put("finish_reason", "stop");
-			JSONArray choices = new JSONArray();
-			choices.add(choice);
-			JSONObject out = new JSONObject();
-			out.put("choices", choices);
-			return out;
-		}
-		catch (Exception e)
-		{
-			log.error("Could not read the error body", e);
-			return null;
-		}
+		return chat(loadCallPayload(inParams, inFunctionName));
 	}
 
 	@Override
@@ -470,36 +446,7 @@ public class OpenAiConnection extends BaseLlmConnection implements CatalogEnable
 		JSONParser parser = new JSONParser();
 		JSONObject structureDef = (JSONObject) parser.parse(inStructure);
 
-		stripLlamaExtensions(structureDef);
-
-		log.info("Sent: " + structureDef.toJSONString());
-
-		HttpPost method = new HttpPost(getServerRoot() + "/chat/completions");
-		method.addHeader("authorization", "Bearer " + getApiKey());
-		method.setHeader("Content-Type", "application/json");
-		method.setEntity(new StringEntity(structureDef.toJSONString(), StandardCharsets.UTF_8));
-
-		CloseableHttpResponse resp = getConnection().sharedExecute(method);
-
-		try
-		{
-			if (resp.getStatusLine().getStatusCode() != 200)
-			{
-				throw new OpenEditException("OpenAI error: " + resp.getStatusLine());
-			}
-
-			JSONObject json = (JSONObject) getConnection().parseMap(resp);
-
-			log.info("Returned: " + json.toJSONString());
-
-			LlmResponse response = createResponse();
-			response.setRawResponse(json);
-			return response;
-		}
-		finally
-		{
-			getConnection().release(resp);
-		}
+		return chat(prepareRequest(structureDef));
 	}
 
 	public LlmResponse callRagFunction(String question, String textContent)
