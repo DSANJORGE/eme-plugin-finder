@@ -124,6 +124,10 @@ public class AdaptiveTutorialUserCommentSkill extends AdaptiveTutorialBaseSkill
 			}
 			String selected = requestValue(tutorMessageContext, request, "selectedoption");
 			String confidence = requestValue(tutorMessageContext, request, "confidence");
+			// TestU voice mode (context_voice=true on a voice turn): the template asks for a spoken
+			// variant too. Set on every call, a replayed value from the channel context would stick.
+			boolean voice = "true".equals(requestValue(tutorMessageContext, request, "voice"));
+			tutorMessageContext.putContextValue("voice", Boolean.valueOf(voice));
 			String prompt = usermessage;
 			if (selected != null && selected.length() > 0)
 			{
@@ -202,6 +206,18 @@ public class AdaptiveTutorialUserCommentSkill extends AdaptiveTutorialBaseSkill
 			{
 				tutorMessageContext.error("No answer from tutorial context for: " + usermessage);
 				return;
+			}
+			// The spoken variant rides in the reply's agentcontextvalues, the broadcast's only open
+			// field (the app reads it there); no cite guards, brackets stripped as cheap safety.
+			// ponytail: no length cap here, speak.json clips at 600 chars on a sentence end already.
+			String spoken = voice && structured.get("spoken") != null ? String.valueOf(structured.get("spoken")).replaceAll("\\[[^\\]]*\\]", "").replaceAll("\\s+", " ").trim() : null;
+			if (spoken == null || spoken.isEmpty())
+			{
+				tutorMessageContext.getContext().remove("spoken");
+			}
+			else
+			{
+				tutorMessageContext.putContextValue("spoken", spoken);
 			}
 			// TestU local patch: llamat sometimes brackets a lesson heading as if it were a
 			// citation ("[4.3 Autenticación multifactor (MFA)]"); the app reads any
