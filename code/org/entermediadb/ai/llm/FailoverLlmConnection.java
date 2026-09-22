@@ -244,8 +244,7 @@ public class FailoverLlmConnection implements LlmConnection
 		LlmConnection connection = null;
 		try
 		{
-			connection = (LlmConnection) fieldMediaArchive.getModuleManager().getBean(fieldMediaArchive.getCatalogId(), server.get("connectionbean"), false);
-			connection.setAiServerData(server);
+			connection = loadConnection(server);
 		}
 		catch (Exception ex)
 		{
@@ -254,6 +253,14 @@ public class FailoverLlmConnection implements LlmConnection
 		extra = new Entry(server, connection);
 		Entry raced = fieldExtraEntries.putIfAbsent(inServerId, extra);
 		return raced == null ? extra : raced;
+	}
+
+	/** The connection bean named by a server row outside the ladder. Split out of entryFor so a test can stub it. */
+	protected LlmConnection loadConnection(Data inServer)
+	{
+		LlmConnection connection = (LlmConnection) fieldMediaArchive.getModuleManager().getBean(fieldMediaArchive.getCatalogId(), inServer.get("connectionbean"), false);
+		connection.setAiServerData(inServer);
+		return connection;
 	}
 
 	/** The entries to try, in order: the route's aiservers (disabled and unknown ids skipped) or the ladder. */
@@ -331,6 +338,7 @@ public class FailoverLlmConnection implements LlmConnection
 			String status = "error";
 			String error = "empty response";
 			LlmResponse response = null;
+			boolean threw = false;
 			try
 			{
 				if (entry.connection instanceof BaseLlmConnection)
@@ -342,6 +350,7 @@ public class FailoverLlmConnection implements LlmConnection
 			catch (Exception ex)
 			{
 				last = ex;
+				threw = true;
 				status = isTimeout(ex) ? "timeout" : "error";
 				error = ex.getMessage() == null ? ex.getClass().getSimpleName() : ex.getMessage();
 			}
@@ -358,8 +367,16 @@ public class FailoverLlmConnection implements LlmConnection
 			if (response != null && (response.getRawResponse() != null || response.getRawCollection() != null))
 			{
 				entry.succeeded();
-				logAttempt(entry.server, inWhat, "ok", ended - now, attempt, null, response);
+				if (logsSuccess())
+				{
+					logAttempt(entry.server, inWhat, "ok", ended - now, attempt, null, response);
+				}
 				return response;
+			}
+			if (!threw)
+			{
+				// An empty reply from this attempt is the reason to report, not a stale exception from an earlier one.
+				last = null;
 			}
 			lastReason = error.split("\n")[0].trim();
 			if (lastReason.length() > 120)
@@ -390,6 +407,12 @@ public class FailoverLlmConnection implements LlmConnection
 	}
 
 	// ---- aicalllog ----
+
+	/** Embedding/vectorize types run once per entity in bulk imports (10k+ rows); an ok row per call would flood the log. */
+	protected boolean logsSuccess()
+	{
+		return !("embedding".equals(fieldServerType) || "vectorize".equals(fieldServerType));
+	}
 
 	public static Integer httpStatusOf(String inMessage)
 	{

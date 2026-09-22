@@ -6,9 +6,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Deque;
 import java.util.List;
+import java.util.Map;
 
 import org.entermediadb.ai.AgentContext;
 import org.entermediadb.ai.llm.openai.OpenAiResponse;
+import org.entermediadb.asset.MediaArchive;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.openedit.Data;
@@ -32,8 +34,7 @@ public class FailoverLlmConnectionTest extends TestCase
 			return this;
 		}
 
-		@Override
-		public LlmResponse callStructure(AgentContext inContext, String inFunction)
+		private LlmResponse nextOutcome()
 		{
 			calls++;
 			observedTimeoutSeconds = getTimeoutSeconds();
@@ -51,6 +52,20 @@ public class FailoverLlmConnectionTest extends TestCase
 				throw new OpenEditException((Throwable) next);
 			}
 			return reply((String) next);
+		}
+
+		@Override
+		public LlmResponse callStructure(AgentContext inContext, String inFunction)
+		{
+			return nextOutcome();
+		}
+
+		/** Same scripted outcomes as callStructure but a plain pass-through: needed to reach failover's own
+		 * "empty response, no exception" handling instead of callStructure's own empty-payload guard. */
+		@Override
+		public LlmResponse callJson(String inPath, Map inPayload)
+		{
+			return nextOutcome();
 		}
 
 		/** A chat.completions reply whose content is the JSON {"message": text}, as the tutor templates return. */
@@ -107,7 +122,13 @@ public class FailoverLlmConnectionTest extends TestCase
 	/** Ladder a then b; airoute lookups answer routeRow; log rows are collected as "server:status". */
 	protected FailoverLlmConnection router(Data... inServers)
 	{
-		FailoverLlmConnection r = new FailoverLlmConnection("thinking")
+		return routerOf("thinking", inServers);
+	}
+
+	/** Same as router(...) but with a chosen fieldServerType, so embedding/vectorize log behavior can be tested. */
+	protected FailoverLlmConnection routerOf(String inType, Data... inServers)
+	{
+		FailoverLlmConnection r = new FailoverLlmConnection(inType)
 		{
 			@Override
 			protected Data route(String inFunction)
@@ -340,5 +361,90 @@ public class FailoverLlmConnectionTest extends TestCase
 		assertEquals(Integer.valueOf(503), row.getValue("httpstatus"));
 		assertEquals(Long.valueOf(10L), row.getValue("prompttokens"));
 		assertEquals(Long.valueOf(20L), row.getValue("completiontokens"));
+	}
+
+	public void testEmptyFinalAttemptReportsEmptyNotEarlierError()
+	{
+		a.then(new RuntimeException("LLM HTTP 500 from x: boom"));
+		b.then("empty");
+		try
+		{
+			router(serverA, serverB).callJson("fn", (Map) null);
+			fail("expected exception");
+		}
+		catch (OpenEditException ex)
+		{
+			assertTrue(ex.getMessage(), ex.getMessage().contains("empty response"));
+			assertFalse(ex.getMessage(), ex.getMessage().contains("boom"));
+		}
+		assertEquals(Arrays.asList("a:error", "b:error"), logged);
+	}
+
+	public void testEmbeddingTypeLogsFailuresOnly()
+	{
+		a.then(new RuntimeException("LLM HTTP 500 from x: boom"));
+		b.then("ok");
+		assertEquals("ok", text(routerOf("embedding", serverA, serverB).callStructure(null, "fn")));
+		assertEquals(Arrays.asList("a:error"), logged);
+	}
+
+	public void testRouteBuildsEntryOnDemandForRowOutsideLadder()
+	{
+		final Fake c = new Fake();
+		c.then("desde c");
+		final Data serverC = server("c", "3", "5");
+		final int[] loadCalls = { 0 };
+
+		MediaArchive archive = new MediaArchive()
+		{
+			@Override
+			public String getCatalogId()
+			{
+				return "test";
+			}
+
+			@Override
+			public Data getData(String inSearchType, String inId)
+			{
+				return "aiserver".equals(inSearchType) && "c".equals(inId) ? serverC : null;
+			}
+		};
+
+		FailoverLlmConnection r = new FailoverLlmConnection("thinking")
+		{
+			@Override
+			protected Data route(String inFunction)
+			{
+				return routeRow;
+			}
+
+			@Override
+			protected void logAttempt(Data inServer, String inFunction, String inStatus, long inMs, int inAttempt, String inError, LlmResponse inResponse)
+			{
+				logged.add(inServer.getId() + ":" + inStatus);
+			}
+
+			@Override
+			protected LlmConnection loadConnection(Data inServer)
+			{
+				loadCalls[0]++;
+				return c;
+			}
+		};
+		r.add(serverA, a);
+		r.setMediaArchive(archive);
+
+		BaseData route = new BaseData();
+		route.setId("fn");
+		route.setValue("aiservers", Arrays.asList("c", "a"));
+		routeRow = route;
+
+		assertEquals("desde c", text(r.callStructure(null, "fn")));
+		assertEquals(0, a.calls);
+		assertEquals(Arrays.asList("c:ok"), logged);
+
+		logged.clear();
+		r.callStructure(null, "fn");
+		assertEquals(1, loadCalls[0]);
 	}
 }
