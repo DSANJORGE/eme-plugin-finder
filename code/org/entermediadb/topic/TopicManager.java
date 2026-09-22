@@ -490,7 +490,7 @@ public class TopicManager extends BaseMediaModule
 		String channelid = inReq.getRequestParameter("channel");
 		if (channelid != null)
 		{
-			currentchannel = (MultiValued) mediaArchive.query("channel").exact("searchtype", "entitytutorial").id(channelid).exact("user", inReq.getUser().getId()).searchOne();
+			currentchannel = (MultiValued) mediaArchive.query("channel").exact("searchtype", "entitytutorial").id(channelid).exact("user", inReq.getUser().getId()).not("testuchat", "true").searchOne();
 			if (currentchannel == null)
 			{
 				throw new OpenEditException("Channel not found: " + channelid + " for user " + inReq.getUser().getId());
