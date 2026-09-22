@@ -15,6 +15,7 @@ package org.entermediadb.asset.modules;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
+import java.util.UUID;
 import java.util.Enumeration;
 import java.util.Iterator;
 import java.util.List;
@@ -821,6 +822,14 @@ public class AdminModule extends BaseMediaModule
 	{
 		BaseAutoLogin autologin = (BaseAutoLogin) getModuleManager().getBean(inReq.findPathValue("catalogid"), "autoLoginWithCookie");
 		int days = autologin.getPasswordExpiryDays(inReq);
+		// Every key below hashes the user's password, and autoLoginFromMd5Value
+		// rejects a user without one: an OTP-only account (imported, never given
+		// a password) would get tokens the server never accepts. Give it one.
+		if (inUser.getPassword() == null || inUser.getPassword().isEmpty())
+		{
+			inUser.setPassword(UUID.randomUUID().toString());
+			getUserManager(inReq).saveUser(inUser);
+		}
 		inReq.putPageValue("access_token", getCookieEncryption().getTempEnterMediaKey(inUser));
 		inReq.putPageValue("token_type", "Bearer");
 		inReq.putPageValue("expires_in", days * 86400);
