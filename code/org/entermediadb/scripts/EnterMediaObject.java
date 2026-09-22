@@ -1,9 +1,9 @@
 package org.entermediadb.scripts;
 
 import java.io.File;
-
 import org.entermediadb.asset.MediaArchive;
 import org.entermediadb.events.PathEventManager;
+import org.openedit.CatalogEnabled;
 import org.openedit.ModuleManager;
 import org.openedit.OpenEditException;
 import org.openedit.WebPageRequest;
@@ -13,13 +13,23 @@ import org.openedit.page.Page;
 import org.openedit.page.manage.PageManager;
 import org.openedit.servlet.OpenEditEngine;
 import org.openedit.users.UserManager;
-
 import groovy.lang.GroovyClassLoader;
 import groovy.util.GroovyScriptEngine;
 
-public class EnterMediaObject
+public class EnterMediaObject implements CatalogEnabled
 {
-	protected WebPageRequest context;
+	protected String catalogId;
+
+	public String getCatalogId()
+	{
+		return catalogId;
+	}
+
+	public void setCatalogId(String inCatalogId)
+	{
+		catalogId = inCatalogId;
+	}
+	protected WebPageRequest context; //optional
 
 	protected MediaArchive fieldMediaArchive;
 	protected ModuleManager moduleManager;
@@ -33,7 +43,7 @@ public class EnterMediaObject
 	{
 		if (fieldMediaArchive == null)
 		{
-			return (MediaArchive) context.getPageValue("mediaarchive");
+			fieldMediaArchive = (MediaArchive)getModuleManager().getBean(getCatalogId(),"mediaArchive");
 		}
 		return fieldMediaArchive;
 	}

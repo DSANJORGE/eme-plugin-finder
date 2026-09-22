@@ -8,9 +8,9 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-
 import org.dom4j.Element;
 import org.openedit.Data;
+import org.openedit.OpenEditException;
 import org.openedit.WebPageRequest;
 import org.openedit.data.PropertyDetail;
 import org.openedit.data.Searcher;
@@ -50,21 +50,28 @@ public class OnixImporter extends BaseImporter
 	protected Data fieldModule;
 
 	@Override
-	public void importData() throws Exception
+	public void importData()
 	{
-		fieldSearcher = loadSearcher(context);
-
-		Page uploadedpage = (Page) context.getPageValue("uploadedpage");
-		if (uploadedpage == null)
+		try
 		{
-			uploadedpage = getPageManager().getPage("/WEB-INF/import/onix-example.xml");
+			fieldSearcher = loadSearcher(context);
+
+			Page uploadedpage = (Page) context.getPageValue("uploadedpage");
+			if (uploadedpage == null)
+			{
+				uploadedpage = getPageManager().getPage("/WEB-INF/import/onix-example.xml");
+			}
+			Reader reader = uploadedpage.getReader();
+
+			XmlUtil util = (XmlUtil) getMediaArchive().getBean("xmlUtil");
+			Element root = util.getXml(reader, "UTF-8");
+
+			processXml(root);
 		}
-		Reader reader = uploadedpage.getReader();
-
-		XmlUtil util = (XmlUtil) getMediaArchive().getBean("xmlUtil");
-		Element root = util.getXml(reader, "UTF-8");
-
-		processXml(root);
+		catch (Exception e)
+		{
+			throw new OpenEditException(e);
+		}
 
 	}
 
@@ -245,11 +252,10 @@ public class OnixImporter extends BaseImporter
 		{
 			type = "root";
 		}
-		else
-			if (inParent.getLevel() == 2)
-			{
-				type = "connector";
-			}
+		else if (inParent.getLevel() == 2)
+		{
+			type = "connector";
+		}
 
 		if (type == null)
 		{

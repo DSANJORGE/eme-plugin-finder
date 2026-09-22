@@ -3328,4 +3328,10 @@
 		</property>
 	</bean>
 
+	<bean id="csvImporter" class="org.entermediadb.asset.importer.CsvImporter" lazy-init="default" scope="prototype">
+		<property name="moduleManager">
+			<ref bean="moduleManager" />
+		</property>
+	</bean>
+
 </beans>
