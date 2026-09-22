@@ -497,7 +497,7 @@ public class TopicManager extends BaseMediaModule
 			}
 			if ("finished".equals(currentchannel.get("channelstatus")))
 			{
-				activechannel = (MultiValued) mediaArchive.query("channel").exact("searchtype", "entitytutorial").exact("dataid", dataid).exact("user", inReq.getUser().getId()).not("channelstatus", "finished").sort("dateDown").searchOne();
+				activechannel = (MultiValued) mediaArchive.query("channel").exact("searchtype", "entitytutorial").exact("dataid", dataid).exact("user", inReq.getUser().getId()).not("testuchat", "true").not("channelstatus", "finished").sort("dateDown").searchOne();
 			}
 			else
 			{
@@ -510,6 +510,7 @@ public class TopicManager extends BaseMediaModule
 				.exact("searchtype", "entitytutorial")
 				.exact("dataid", dataid)
 				.exact("user", inReq.getUser())
+				.not("testuchat", "true")
 				.not("channelstatus", "finished")
 				.sort("dateDown")
 				.searchOne();
@@ -526,6 +527,7 @@ public class TopicManager extends BaseMediaModule
 			.exact("searchtype", "entitytutorial")
 			.exact("dataid", dataid)
 			.exact("user", inReq.getUser().getId())
+			.not("testuchat", "true")
 			.exact("channelstatus", "finished")
 			.sort("dateDown")
 			.search();
