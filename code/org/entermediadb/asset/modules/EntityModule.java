@@ -19,7 +19,6 @@ import org.entermediadb.asset.fetch.YoutubeImporter;
 import org.entermediadb.asset.fetch.YoutubeMetadataSnippet;
 import org.entermediadb.asset.fetch.YoutubeParser;
 import org.entermediadb.asset.importer.CsvImporter;
-import org.entermediadb.asset.importer.XlsImporter;
 import org.entermediadb.asset.upload.FileUpload;
 import org.entermediadb.asset.upload.FileUploadItem;
 import org.entermediadb.asset.upload.UploadRequest;
@@ -43,7 +42,6 @@ import org.openedit.page.Page;
 import org.openedit.repository.ContentItem;
 import org.openedit.users.User;
 import org.openedit.util.PathUtilities;
-import org.openedit.util.URLUtilities;
 
 public class EntityModule extends BaseMediaModule
 {
@@ -1376,7 +1374,7 @@ public class EntityModule extends BaseMediaModule
 			}
 			else if (mime.contains("ms-excel"))
 			{
-				XlsImporter csvimporter = new XlsImporter();
+				CsvImporter csvimporter = new CsvImporter();
 				csvimporter.setModuleManager(getModuleManager());
 				csvimporter.setContext(inReq);
 				csvimporter.setImportPage(tmp);
