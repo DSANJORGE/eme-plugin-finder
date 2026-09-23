@@ -111,7 +111,9 @@ public class ElasticUserSearcher extends ElasticListSearcher implements UserSear
 		if (inEmail != null)
 		{
 			inEmail = inEmail.trim();
-			Data record = (Data) query().or().match("email", inEmail).match("email", inEmail.toLowerCase()).sort("enabledDown").searchOne();
+			// Data record = (Data)query().or().startsWith("email",
+			// inEmail).startsWith("email", inEmail.toLowerCase()).searchOne();
+			Data record = (Data) query().match("email", inEmail).sort("enabledDown").searchOne();
 			if (record != null)
 			{
 				target = (User) loadData(record);
@@ -141,34 +143,6 @@ public class ElasticUserSearcher extends ElasticListSearcher implements UserSear
 	public void saveUsers(List userstosave, User inUser)
 	{
 		saveAllData(userstosave, inUser);
-	}
-
-	// Email is the login key and a case-sensitive keyword field: store it lower case so
-	// getUserByEmail finds the user whatever the sign-in form typed.
-	protected void normalizeEmail(Data inData)
-	{
-		String email = inData.get("email");
-		if (email != null)
-		{
-			inData.setValue("email", email.trim().toLowerCase());
-		}
-	}
-
-	@Override
-	public void saveData(Data inData, User inUser)
-	{
-		normalizeEmail(inData);
-		super.saveData(inData, inUser);
-	}
-
-	@Override
-	public void saveAllData(Collection<Data> inAll, User inUser)
-	{
-		for (Data data : inAll)
-		{
-			normalizeEmail(data);
-		}
-		super.saveAllData(inAll, inUser);
 	}
 
 	@Override
