@@ -47,11 +47,53 @@ public class AdaptiveTutorialUserCommentSkill extends AdaptiveTutorialBaseSkill
 		}
 		String userId = tutorMessageContext.getUserProfile().getUser().getId();
 
+		// The learner's answer and the question in play: only what THIS
+		// request carried (the app's context_* ride on its system message as
+		// agentcontextvalues). The channel context keeps the last session
+		// answer around, so free chat from the tutor tab or a document was
+		// told "your last answer, option A, is wrong" (2026-09-04).
+		String requestStr = tutorMessageContext.getUserMessage() == null ? null : tutorMessageContext.getUserMessage().get("agentcontextvalues");
+		JSONObject request = null;
+		try
+		{
+			JSONParser parser = new JSONParser();
+			request = (JSONObject) parser.parse(requestStr);
+		}
+		catch (Exception e)
+		{
+			log.error("Failed to parse request values", e);
+		}
+		// TestU IRIS tab (context_scope=org, 2026-09-22): the org-wide assistant, not a lesson tutor.
+		// Sources are the documents of every topic the learner may see; no lesson, no section, no
+		// tutorial (a stale tutorialid/sectionid from the channel context is ignored).
+		boolean org = "org".equals(requestValue(tutorMessageContext, request, "scope"));
+		Collection<MultiValued> orgdocs = null;
+		Map<String, String> topicOfDoc = new HashMap<String, String>();
+		StringBuilder overview = new StringBuilder();
+		if (org)
+		{
+			tutorialid = null;
+			sectionid = null;
+			orgdocs = learnerDocuments(tutorMessageContext.getUserProfile(), topicOfDoc, overview);
+			tutorMessageContext.putContextValue("topicnames", topicNames(new java.util.LinkedHashSet<String>(topicOfDoc.values())));
+		}
+		else
+		{
+			tutorMessageContext.getContext().remove("topicnames");
+		}
+
 		LlmConnection llmconnection = getMediaArchive().getLlmConnection("embedding");
 
-		JSONArray chatHistory = getReleaventChatHistory(sectionid, channelid, userId);
+		JSONArray chatHistory = org ? new JSONArray() : getReleaventChatHistory(sectionid, channelid, userId);
+		if (org && overview.length() > 0)
+		{
+			JSONObject item = new JSONObject();
+			item.put("role", "assistant");
+			item.put("content", overview.toString());
+			chatHistory.add(item);
+		}
 
-		Collection<String> parentIds = getAssistantManager().findDocIdsForEntity("entitytutorial", tutorialid);
+		Collection<String> parentIds = org ? new java.util.ArrayList<String>() : getAssistantManager().findDocIdsForEntity("entitytutorial", tutorialid);
 
 		String answer = null;
 		String embedkey = llmconnection.getApiKey();
@@ -106,22 +148,6 @@ public class AdaptiveTutorialUserCommentSkill extends AdaptiveTutorialBaseSkill
 			// the app) and keyword-matched excerpts of the reference documents —
 			// instead of dropping the question or replying "no sources".
 			log.info("Answering from tutorial context for tutorial " + tutorialid);
-			// The learner's answer and the question in play: only what THIS
-			// request carried (the app's context_* ride on its system message as
-			// agentcontextvalues). The channel context keeps the last session
-			// answer around, so free chat from the tutor tab or a document was
-			// told "your last answer, option A, is wrong" (2026-09-04).
-			String requestStr = tutorMessageContext.getUserMessage() == null ? null : tutorMessageContext.getUserMessage().get("agentcontextvalues");
-			JSONObject request = null;
-			try
-			{
-				JSONParser parser = new JSONParser();
-				request = (JSONObject) parser.parse(requestStr);
-			}
-			catch (Exception e)
-			{
-				log.error("Failed to parse request values", e);
-			}
 			String selected = requestValue(tutorMessageContext, request, "selectedoption");
 			String confidence = requestValue(tutorMessageContext, request, "confidence");
 			// TestU voice mode (context_voice=true on a voice turn): the template asks for a spoken
@@ -155,8 +181,20 @@ public class AdaptiveTutorialUserCommentSkill extends AdaptiveTutorialBaseSkill
 			// A session follow-up ("¿Por qué las otras opciones están mal?") has no keywords of its own: the
 			// question's text and its correct option find the pages the learner's words cannot.
 			String questiontext = question == null ? null : question.get("question") + " " + question.get("option_" + String.valueOf(question.get("correctoption")).toLowerCase());
+			String recent = recentConversation(channelid, tutorMessageContext.getUserMessage() == null ? "" : tutorMessageContext.getUserMessage().getId());
+			// A short reply ("sí", "explícamelo", "eso") accepts the previous Tutor turn's first >> offer (rule 1):
+			// retrieve on the offer's words too, the learner's carry none (2026-09-22).
+			// ponytail: any message of 3 words or fewer, not rule 1's word list; a "hola" or "no" gains nothing and loses nothing.
+			String offer = null;
+			int lastturn = usermessage != null && usermessage.trim().split("\\s+").length <= 3 ? recent.lastIndexOf("Tutor:") : -1;
+			if (lastturn >= 0 && recent.indexOf(">>", lastturn) >= 0)
+			{
+				int o = recent.indexOf(">>", lastturn) + 2;
+				int e = recent.indexOf('\n', o);
+				offer = recent.substring(o, e < 0 ? recent.length() : e).trim();
+			}
 			long started = System.currentTimeMillis();
-			String excerpts = findReferenceExcerpts(tutorialid, sent, usermessage, questiontext);
+			String excerpts = org ? findReferenceExcerpts(orgdocs, topicOfDoc, sent, usermessage, offer, questiontext) : findReferenceExcerpts(tutorialid, sent, usermessage, offer, questiontext);
 			log.info("Tutor excerpts: " + excerpts.length() + " chars in " + (System.currentTimeMillis() - started) + " ms");
 			tutorMessageContext.putContextValue("referenceexcerpts", viewed + excerpts);
 			if (question != null)
@@ -189,7 +227,6 @@ public class AdaptiveTutorialUserCommentSkill extends AdaptiveTutorialBaseSkill
 			{
 				prompt = "Mode: " + mode + "\n" + prompt;
 			}
-			String recent = recentConversation(channelid, tutorMessageContext.getUserMessage() == null ? "" : tutorMessageContext.getUserMessage().getId());
 			if (recent.length() > 0)
 			{
 				prompt = recent + "\n" + prompt;
@@ -219,6 +256,17 @@ public class AdaptiveTutorialUserCommentSkill extends AdaptiveTutorialBaseSkill
 			{
 				tutorMessageContext.putContextValue("spoken", spoken);
 			}
+			// Voice closing ("no", "gracias"): end true rides beside spoken and the app leaves voice mode.
+			// Only ever true: a stale value in the channel context would close the next session.
+			boolean end = voice && Boolean.TRUE.equals(structured.get("end"));
+			if (end)
+			{
+				tutorMessageContext.putContextValue("end", Boolean.TRUE);
+			}
+			else
+			{
+				tutorMessageContext.getContext().remove("end");
+			}
 			// TestU local patch: llamat sometimes brackets a lesson heading as if it were a
 			// citation ("[4.3 Autenticación multifactor (MFA)]"); the app reads any
 			// [..., p. N] / [..., m:ss] as a source, so drop every bracket group that is not one.
@@ -236,14 +284,14 @@ public class AdaptiveTutorialUserCommentSkill extends AdaptiveTutorialBaseSkill
 			}
 			cm.appendTail(grounded);
 			message = grounded.toString().trim();
-			if (!message.contains(">>"))
+			if (!end && !message.contains(">>"))
 			{
-				// The app renders the ">> ..." lines as follow-up chips; llamat sometimes omits them.
-				message = message + "\n\n>> " + ("evaluation".equals(mode) ? "¿Quieres que te explique cómo funciona esta pregunta?" : question != null ? "¿Quieres que te explique la pregunta en juego?" : "¿Quieres que te explique algún punto de esta lección?");
+				// The app renders the ">> ..." lines as follow-up chips; llamat sometimes omits them. A closing has none.
+				message = message + "\n\n>> " + ("evaluation".equals(mode) ? "¿Quieres que te explique cómo funciona esta pregunta?" : question != null ? "¿Quieres que te explique la pregunta en juego?" : org ? "¿Quieres que te explique algún punto de estos temas?" : "¿Quieres que te explique algún punto de esta lección?");
 			}
 			// The RAG path gets the passage and its boxes from the embedding server's
 			// sources; here the tutor wrote the citation itself, so look the page up.
-			answer = message + quoteForCitation(tutorialid, message, usermessage, sent);
+			answer = message + (org ? quoteForCitation(orgdocs, message, usermessage, sent) : quoteForCitation(tutorialid, message, usermessage, sent));
 		}
 
 		LlmResponse llmResponse = new BasicLlmResponse();
@@ -376,6 +424,12 @@ public class AdaptiveTutorialUserCommentSkill extends AdaptiveTutorialBaseSkill
 		{
 			return "";
 		}
+		return quoteForCitation(getMediaArchive().query("entityasset").exact("entitytutorial", inTutorialId).search(), inAnswer, inQuery, inSent);
+	}
+
+	/** quoteForCitation over a given set of documents (the IRIS tab: every topic's). */
+	protected String quoteForCitation(Collection<MultiValued> inDocs, String inAnswer, String inQuery, Map<String, String> inSent)
+	{
 		java.util.regex.Matcher m = PAGECITE.matcher(inAnswer);
 		String title = null;
 		String page = null;
@@ -401,7 +455,7 @@ public class AdaptiveTutorialUserCommentSkill extends AdaptiveTutorialBaseSkill
 			return "";
 		}
 		Data doc = null;
-		for (Object candidate : getMediaArchive().query("entityasset").exact("entitytutorial", inTutorialId).search())
+		for (Object candidate : inDocs)
 		{
 			if (title.equals(((Data) candidate).getName()))
 			{
@@ -758,6 +812,20 @@ public class AdaptiveTutorialUserCommentSkill extends AdaptiveTutorialBaseSkill
 		{
 			return "";
 		}
+		return findReferenceExcerpts(docs, null, inSent, queries);
+	}
+
+	/**
+	 * findReferenceExcerpts over a given set of documents (the IRIS tab: every topic's). inTopicOfDoc
+	 * (doc id to topic name, null for one tutorial) names the topic after each heading, outside the
+	 * brackets like viewedPage's suffix, so the model can say which manual an answer comes from.
+	 */
+	protected String findReferenceExcerpts(Collection<MultiValued> docs, Map<String, String> inTopicOfDoc, Map<String, String> inSent, String... queries)
+	{
+		if (docs.isEmpty())
+		{
+			return "";
+		}
 		// ponytail: ranked keyword match on the page text; the embedding server does the
 		// real semantic retrieval when its /chat works. markdowncontent is not_analyzed (one
 		// keyword per page): search description, which holds the page text. match = one analyzed
@@ -827,7 +895,8 @@ public class AdaptiveTutorialUserCommentSkill extends AdaptiveTutorialBaseSkill
 			text = bestParagraphs(text, qterms, max);
 			inSent.put(title, text);
 			inSent.put(title + "|" + page.get("pagenum"), text);
-			out.append("[").append(title).append(", p. ").append(page.get("pagenum")).append("]\n");
+			String topic = inTopicOfDoc == null ? null : inTopicOfDoc.get(page.get("entityasset"));
+			out.append("[").append(title).append(", p. ").append(page.get("pagenum")).append("]").append(topic == null ? "" : " (topic: " + topic + ")").append("\n");
 			out.append(text).append("\n\n");
 		}
 		return out.toString();
@@ -943,6 +1012,106 @@ public class AdaptiveTutorialUserCommentSkill extends AdaptiveTutorialBaseSkill
 			}
 		}
 		return out.toString();
+	}
+
+	/**
+	 * TestU IRIS tab: the reference documents of every tutorial of every topic the learner may see,
+	 * with inTopicOfDoc filled (doc id to topic name) and inOverview set to one line naming the
+	 * topics, their tutorials and section headings (the tab's lesson context, for "qué temas tienes").
+	 * Topic visibility is the platform's entity security as the topic service applies it
+	 * (BaseSearchSecurity.attachStandardSecurity, which needs a request this skill has not):
+	 * administrators see all; else a topic with securityenabled false, or listing one of the user's
+	 * groups, or owned by or viewable by the user.
+	 */
+	protected Collection<MultiValued> learnerDocuments(org.openedit.profile.UserProfile inProfile, Map<String, String> inTopicOfDoc, StringBuilder inOverview)
+	{
+		org.openedit.data.Searcher topics = getMediaArchive().getSearcher("entitytopic");
+		org.openedit.data.QueryBuilder q = topics.query().all();
+		if (inProfile == null || !inProfile.isInRole("administrator"))
+		{
+			java.util.List<String> groupids = new java.util.ArrayList<String>();
+			if (inProfile == null || inProfile.getUser() == null)
+			{
+				groupids.add("anonymous");
+			}
+			else
+			{
+				for (Object g : inProfile.getUser().getGroups())
+				{
+					groupids.add(((org.openedit.users.Group) g).getId());
+				}
+			}
+			String userid = inProfile == null || inProfile.getUserId() == null ? "null" : inProfile.getUserId();
+			q.getQuery().addChildQuery(topics.query().or().orgroup("viewgroups", groupids).exact("owner", userid).exact("viewusers", userid).exact("securityenabled", "false").getQuery());
+		}
+		Map<String, String> topicnames = new LinkedHashMap<String, String>();
+		for (Object o : q.search())
+		{
+			topicnames.put(((Data) o).getId(), ((Data) o).getName());
+		}
+		Map<String, String> topicOfTutorial = new LinkedHashMap<String, String>();
+		Map<String, StringBuilder> lines = new LinkedHashMap<String, StringBuilder>();
+		if (!topicnames.isEmpty())
+		{
+			for (Object o : getMediaArchive().query("entitytutorial").orgroup("entitytopic", topicnames.keySet()).search())
+			{
+				Data t = (Data) o;
+				String topic = topicnames.get(t.get("entitytopic"));
+				if (topic != null)
+				{
+					topicOfTutorial.put(t.getId(), topic);
+					lines.computeIfAbsent(topic, k -> new StringBuilder()).append(" Tutorial \"").append(t.getName()).append("\", sections:");
+				}
+			}
+		}
+		Collection<MultiValued> docs = new java.util.ArrayList<MultiValued>();
+		if (!topicOfTutorial.isEmpty())
+		{
+			for (Object o : getMediaArchive().query("componentsection").exact("playbackentitymoduleid", "entitytutorial").orgroup("playbackentityid", topicOfTutorial.keySet()).sort("ordering").search())
+			{
+				Data s = (Data) o;
+				StringBuilder line = lines.get(topicOfTutorial.get(s.get("playbackentityid")));
+				if (line != null)
+				{
+					line.append(' ').append(s.getName()).append(';');
+				}
+			}
+			docs = getMediaArchive().query("entityasset").orgroup("entitytutorial", topicOfTutorial.keySet()).search();
+			for (MultiValued doc : docs)
+			{
+				for (String t : doc.getValues("entitytutorial"))
+				{
+					if (topicOfTutorial.containsKey(t))
+					{
+						inTopicOfDoc.put(doc.getId(), topicOfTutorial.get(t));
+					}
+				}
+			}
+		}
+		if (!topicnames.isEmpty())
+		{
+			inOverview.append("Topics loaded for this learner (the sources cover all of them):");
+			for (String topic : topicnames.values())
+			{
+				inOverview.append("\n- ").append(topic).append(':').append(lines.containsKey(topic) ? lines.get(topic) : " (no tutorial yet)");
+			}
+		}
+		return docs;
+	}
+
+	/** "A", "A y B", "A, B y C" — the template's off-topic sentence names them. */
+	protected String topicNames(Collection<String> inNames)
+	{
+		java.util.List<String> names = new java.util.ArrayList<String>(inNames);
+		if (names.isEmpty())
+		{
+			return "";
+		}
+		if (names.size() == 1)
+		{
+			return names.get(0);
+		}
+		return String.join(", ", names.subList(0, names.size() - 1)) + " y " + names.get(names.size() - 1);
 	}
 
 	/**
