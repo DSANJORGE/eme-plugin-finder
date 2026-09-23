@@ -111,8 +111,6 @@ public class ElasticUserSearcher extends ElasticListSearcher implements UserSear
 		if (inEmail != null)
 		{
 			inEmail = inEmail.trim();
-			// email is a not_analyzed keyword, so matching is case-sensitive. Accept either spelling:
-			// records saved before saveData/saveAllData normalized them may still be upper case.
 			Data record = (Data) query().or().match("email", inEmail).match("email", inEmail.toLowerCase()).sort("enabledDown").searchOne();
 			if (record != null)
 			{
