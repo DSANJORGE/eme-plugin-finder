@@ -3,11 +3,12 @@ package org.entermediadb.elasticsearch.searchers;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.entermediadb.asset.importer.CsvImporter;
 import org.entermediadb.data.DataArchive;
 import org.entermediadb.elasticsearch.SearchHitData;
+import org.entermediadb.scripts.ScriptLogger;
 import org.openedit.Data;
 import org.openedit.OpenEditException;
 import org.openedit.data.PropertyDetails;
@@ -15,9 +16,9 @@ import org.openedit.data.PropertyDetailsArchive;
 import org.openedit.data.Reloadable;
 import org.openedit.hittracker.HitTracker;
 import org.openedit.locks.Lock;
+import org.openedit.page.Page;
 import org.openedit.users.User;
 import org.openedit.xml.ElementData;
-import org.openedit.xml.XmlFile;
 import org.openedit.xml.XmlSearcher;
 
 public class ElasticListSearcher extends BaseElasticSearcher implements Reloadable
@@ -143,8 +144,23 @@ public class ElasticListSearcher extends BaseElasticSearcher implements Reloadab
 			}
 		}
 		updateIndex(toindex, null);
-
 		flushChanges();
+
+		Page defaults = getPageManager().getPage("/" + getCatalogId() + "/data/lists/" + getSearchType() + ".csv");
+		if( defaults.exists())		
+		{
+			//I want to read in CSV files from the catalog/list/*.csv from ElasticListSearcher.reindexXml it should look for a csv file in the same way it looks for an xml file. We can use our standard CSV import tool: 
+			CsvImporter csvimporter = (CsvImporter)getModuleManager().getBean(getCatalogId(),"csvImporter",false);	
+			csvimporter.setSearcher(this);
+			csvimporter.setImportPage(defaults);
+			ScriptLogger logger = new ScriptLogger();
+			csvimporter.setLog(logger);
+			csvimporter.setMakeId(false);
+			//csvimporter.setNewdDetailPrefix("user"); //In case new ids come in
+			csvimporter.importData();
+		}
+
+
 
 	}
 

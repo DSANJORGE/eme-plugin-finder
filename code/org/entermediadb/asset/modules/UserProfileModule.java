@@ -14,6 +14,7 @@ import org.entermediadb.asset.search.AssetSearcher;
 import org.entermediadb.asset.upload.FileUpload;
 import org.entermediadb.asset.upload.FileUploadItem;
 import org.entermediadb.asset.upload.UploadRequest;
+import org.entermediadb.users.PermissionManager;
 import org.openedit.Data;
 import org.openedit.OpenEditException;
 import org.openedit.WebPageRequest;
@@ -303,6 +304,31 @@ public class UserProfileModule extends BaseMediaModule
 			inReq.putPageValue("user", user);
 		}
 
+	}
+
+	public void loadActionPermissionsToEdit(WebPageRequest inReq)
+	{
+	 	String groupid = inReq.getRequestParameter("settingsgroupid");
+		String moduleid = inReq.findValue("module");
+		String entityid = inReq.getRequestParameter("entityid");
+
+		if(groupid != null)
+		{
+			String inCatalogId = inReq.findValue("catalogid");
+			PermissionManager permissionManager = (PermissionManager)getMediaArchive(inCatalogId).getBean("permissionManager");
+
+			Collection<String> permissionassigned = null;
+			if( entityid != null)
+			{
+				permissionassigned = permissionManager.calculateEntityPermissions(moduleid, entityid, groupid);
+			}
+			else
+			{
+				permissionassigned = permissionManager.calculateModulePermissions(moduleid, groupid);
+
+			}
+			inReq.putPageValue("permissionassigned", permissionassigned);
+		}
 	}
 
 }

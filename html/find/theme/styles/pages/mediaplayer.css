@@ -175,9 +175,10 @@ li.assettabnav {
 }
 #assettabnavs .gotoarrows.arrowenabled {
 	pointer-events: all;
+	color: var(--themed-tab-btn-text);
 }
 #assettabnavs .gotoarrows.arrowenabled:hover {
-	color: #dfdfdf;
+	background: var(--themed-tab-btn-hover);
 }
 .lighttheme #assettabnavs .gotoarrows.arrowenabled:hover {
 	color: var(--default-text);
@@ -256,13 +257,6 @@ li.assettabnav {
 	text-decoration: none;
 	color: var(--themed-tab-btn-active-text);
 	font-weight: bold;
-}
-#assettabnavs li.tabselected a:hover {
-	color: var(--themed-tab-btn-active-text);
-	background: var(--themed-tab-btn-active) !important;
-}
-#assettabnavs .gotoarrows.arrowenabled {
-	color: #fff;
 }
 .lighttheme #assettabnavs .gotoarrows.arrowenabled {
 	color: var(--default-text);
@@ -882,7 +876,6 @@ li.assettabnav {
 	border-top: 1px solid #555;
 }
 .asset-data-readwritemetadata a {
-	color: #ffffff;
 	font-size: 0.8rem;
 	display: inline-block;
 	padding: 8px 12px;
@@ -893,7 +886,6 @@ li.assettabnav {
 	border-right: var(--1px-light);
 }
 .asset-data-readwritemetadata a:hover {
-	color: #ddd;
 	background-color: var(--themed-tab-btn-hover);
 	text-decoration: none;
 }

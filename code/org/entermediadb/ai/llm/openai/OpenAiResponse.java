@@ -194,7 +194,7 @@ public class OpenAiResponse extends BasicLlmResponse
     }
 
     @Override
-    public String getRunSkillEnabled()
+    public String getExecAutomationSkill()
     {
         if (fieldRunFunctionName != null)
         {

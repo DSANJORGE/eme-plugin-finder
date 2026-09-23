@@ -41,35 +41,12 @@ public class ChatMonitorResponseSkill extends BaseSkill
 			log.error("No scenario selected for query: " + query);
 			return;
 		}
-		String scenario = null;
 		if (!selectedscenario.contains("."))
 		{
 			log.error("Selected scenario needs the format: scenario.skillenabled. Selected scenario:" + selectedscenario);
 			return;
 		}
-		scenario = selectedscenario.split("\\.")[0];
-		String skillenableid = selectedscenario.split("\\.")[1];
-
-		log.info("Selected scenario: " + selectedscenario + " for scenario: " + scenario + " and skill: " + skillenableid);
-
-		// we are on a task, or answering questions or another sceneration.
-		if (scenario != null)
-		{
-			RunningScenario running = (RunningScenario) getMediaArchive().getBean("runningscenario", false);
-			running.setId(scenario);
-
-			AutomationStep skillEnabled = running.findEnabled(skillenableid);
-			if (skillEnabled == null)
-			{
-				log.error("No skill enabled found for id: " + skillenableid);
-				return;
-			}
-			running.runProcess(skillEnabled, inAgentContext);
-		}
-		else
-		{
-			log.error("Probem");
-		}
+		inAgentContext.getCurrentScenario().runProcess(selectedscenario, inAgentContext);
 
 	}
 

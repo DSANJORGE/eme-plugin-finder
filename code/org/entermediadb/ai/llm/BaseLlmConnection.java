@@ -6,7 +6,6 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -18,7 +17,6 @@ import org.apache.http.util.EntityUtils;
 import org.entermediadb.ai.AgentContext;
 import org.entermediadb.ai.llm.http.HttpResponse;
 import org.entermediadb.asset.MediaArchive;
-import org.openedit.util.HttpSharedConnection;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.openedit.Data;
@@ -31,8 +29,8 @@ import org.openedit.page.PageStreamer;
 import org.openedit.page.manage.PageManager;
 import org.openedit.servlet.OpenEditEngine;
 import org.openedit.users.User;
+import org.openedit.util.HttpSharedConnection;
 import org.openedit.util.OutputFiller;
-import org.openedit.util.PathUtilities;
 import org.openedit.util.RequestUtils;
 
 public class BaseLlmConnection implements LlmConnection
@@ -48,11 +46,16 @@ public class BaseLlmConnection implements LlmConnection
 
 	protected HttpSharedConnection fieldConnection;
 
+	// LLM responses can take a long time to generate (model "thinking"); keep this in sync with
+	// nginx's proxy_read_timeout for the LLM upstream so the Java client isn't the first to time out
+	protected static final int LLM_SOCKET_TIMEOUT = 1200 * 1000;
+
 	protected HttpSharedConnection getConnection()
 	{
 		if (fieldConnection == null)
 		{
 			fieldConnection = new HttpSharedConnection();
+			fieldConnection.setSocketTimeout(LLM_SOCKET_TIMEOUT);
 		}
 		return fieldConnection;
 	}

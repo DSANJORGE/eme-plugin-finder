@@ -90,7 +90,7 @@ public class OllamaResponse extends BasicLlmResponse
 	}
 
 	@Override
-	public String getRunSkillEnabled()
+	public String getExecAutomationSkill()
 	{
 		if (!isToolCall())
 		{

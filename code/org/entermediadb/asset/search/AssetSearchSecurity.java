@@ -9,6 +9,7 @@ import org.openedit.data.SearchSecurity;
 import org.openedit.data.Searcher;
 import org.openedit.hittracker.SearchQuery;
 import org.openedit.profile.UserProfile;
+import org.openedit.users.Permissions;
 import org.openedit.users.User;
 
 public class AssetSearchSecurity extends BaseSearchSecurity implements SearchSecurity
@@ -66,8 +67,9 @@ public class AssetSearchSecurity extends BaseSearchSecurity implements SearchSec
 
 			}
 			SearchQuery required = null;
-
-			if (inPageRequest.hasPermission("hidedeletedassets"))
+			Permissions permissions = profile.getPermissions();
+			Boolean hidedeletedassets = permissions.canModule("asset", "hidedeletedassets");
+			if (hidedeletedassets)
 			{
 				if (inQuery.getTermByDetailId("editstatus") == null)
 				{
@@ -101,11 +103,13 @@ public class AssetSearchSecurity extends BaseSearchSecurity implements SearchSec
 			SearchQuery orchild = inSearcher.createSearchQuery();
 			orchild.setAndTogether(false);
 
-			Boolean caneditdata = (Boolean) inPageRequest.getPageValue("caneditcollection");
+			//Boolean caneditdata = (Boolean) inPageRequest.getPageValue("caneditcollection");
+			Boolean caneditdata = permissions.canModule("asset", "editcollection");
 			String editstatus = null;
 			if (caneditdata == null || !caneditdata)
 			{
-				Boolean showpendingassets = (Boolean) inPageRequest.getPageValue("canshowpendingassets");
+				//Boolean showpendingassets = (Boolean) inPageRequest.getPageValue("canshowpendingassets");
+				Boolean showpendingassets = permissions.canModule("asset", "showpendingassets");
 				if (showpendingassets == null || !showpendingassets) // False
 				{
 					editstatus = "6"; // Approved only

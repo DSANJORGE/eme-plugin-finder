@@ -4460,6 +4460,9 @@ a.toggledialogtree h3 {
 	padding: 0 0 0 16px;
 	border-top: var(--1px-dark);
 }
+.entitytabcolumcontent .tab-actions {
+	padding: 20px;
+}
 .lighttheme .entitytabcolumcontent .tabheader {
 	color: var(--default-text);
 	background: var(--light-bg);
@@ -4951,18 +4954,11 @@ ul.summary-secondary-nav li a:hover {
 }
 .filter-box-header,
 .sidebar-component-header {
-	font-size: 1rem;
+	font-size: 0.95rem;
 	font-weight: bold;
-	line-height: 1.1;
-	margin-bottom: 5px;
-}
-.filter-box-header {
-	color: var(--themed-navbar-secondary-text);
-	background: var(--themed-navbar-secondary);
-	padding: 6px 8px;
+	line-height: 1; 
+	padding: 6px 0;
 	display: flex;
-	align-items: center;
-	margin: 0;
 }
 .lighttheme .filter-box-header {
 	color: var(--default-text);
@@ -4975,7 +4971,6 @@ ul.summary-secondary-nav li a:hover {
 .filter-box-options {
 	margin: 0;
 	max-height: 380px;
-	border: var(--1px-light);
 }
 .lighttheme .filter-box-options {
 	padding: 0;
@@ -4988,9 +4983,10 @@ ul.summary-secondary-nav li a:hover {
 }
 .filter-box-header i,
 .sidebar-component-header i.caret {
-	margin: 0 2px 0 4px;
-	width: 10px;
-	text-align: right;
+	transform: scale(0.5);
+	font-size: 0.85em;
+	width: 11px;
+	text-align: left;
 }
 i.caret {
 	transform: rotate(0deg);

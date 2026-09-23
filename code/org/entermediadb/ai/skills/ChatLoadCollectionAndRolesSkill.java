@@ -92,7 +92,7 @@ public class ChatLoadCollectionAndRolesSkill extends BaseSkill
 
 		messageContext.setLastResponse(response);
 
-		String selectedtool = response.getRunSkillEnabled();
+		String selectedtool = response.getExecAutomationSkill();
 		if (selectedtool == null)
 		{
 			log.error("No tool selected for query: " + query);

@@ -18,6 +18,7 @@ import org.openedit.OpenEditException;
 import org.openedit.page.Page;
 import org.openedit.util.JSONParser;
 import org.openedit.util.OutputFiller;
+import groovy.json.JsonOutput;
 
 public class OpenAiConnection extends BaseLlmConnection implements CatalogEnabled, LlmConnection
 {
@@ -258,8 +259,9 @@ public class OpenAiConnection extends BaseLlmConnection implements CatalogEnable
 
 		JSONParser parser = new JSONParser();
 		JSONObject payload = (JSONObject) parser.parse(definition);
-
-		log.info(payload);
+		// print the payload pretty
+		// log.info(payload.toJSONString());
+		log.info(JsonOutput.prettyPrint(payload.toJSONString()));
 
 		LlmResponse res = callJson("/chat/completions", payload);
 		return res;

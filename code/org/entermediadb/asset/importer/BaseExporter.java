@@ -3,8 +3,9 @@ package org.entermediadb.asset.importer;
 import java.io.Writer;
 import java.util.Collection;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Iterator;
-
+import java.util.Map;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.entermediadb.asset.util.CSVWriter;
@@ -83,9 +84,9 @@ public class BaseExporter
 				}
 			}
 		}
-		else
+		if (details == null || details.isEmpty())
 		{
-			// if not friendly export all fields
+			// if not friendly or not view provided export all fields
 			details = searcher.getPropertyDetails();
 		}
 
@@ -94,6 +95,8 @@ public class BaseExporter
 			log.error("No details to export");
 			return;
 		}
+
+
 
 		int count = 0;
 		Writer output = inReq.getPageStreamer().getOutput().getWriter();
@@ -193,28 +196,42 @@ public class BaseExporter
 						if (detail.isMultiValue())
 						{
 							StringBuffer buf = new StringBuffer();
-							Collection values = hit.getValues(detail.getId());
-							if (values == null)
+							if (friendly)
 							{
-								nextrow[fieldcount] = "";
-								fieldcount++;
-								continue;
-							}
-							for (Iterator iterator2 = values.iterator(); iterator2.hasNext();)
-							{
-								Object obj = iterator2.next();
-								value = toString(searcherManager, obj, detail);
-								buf.append(value);
-								if (iterator2.hasNext())
+								Collection values = hit.getValues(detail.getId());
+								if (values == null)
 								{
-									buf.append("|");
+									nextrow[fieldcount] = "";
+									fieldcount++;
+									continue;
 								}
+								for (Iterator iterator2 = values.iterator(); iterator2.hasNext();)
+								{
+									Object obj = iterator2.next();
+									value = toString(searcherManager, obj, detail);
+									buf.append(value);
+									if (iterator2.hasNext())
+									{
+										buf.append("|");
+									}
+								}
+								value = buf.toString();
 							}
-							value = buf.toString();
+							else 
+							{
+								value = hit.get(detail.getId());
+							}
 						}
 						else
 						{
-							value = toString(searcherManager, hit.getValue(detail.getId()), detail);
+							if (friendly)
+							{
+								value = toString(searcherManager, hit.getValue(detail.getId()), detail);
+							}
+							else
+							{
+								value = hit.get(detail.getId());
+							}
 						}
 						nextrow[fieldcount] = value;
 						fieldcount++;

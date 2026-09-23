@@ -9,10 +9,10 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-
 import org.dom4j.Element;
 import org.entermediadb.asset.Asset;
 import org.openedit.Data;
+import org.openedit.OpenEditException;
 import org.openedit.WebPageRequest;
 import org.openedit.data.PropertyDetail;
 import org.openedit.data.Searcher;
@@ -64,23 +64,29 @@ public class DitaImporter extends BaseImporter
 	protected Data fieldModule;
 
 	@Override
-	public void importData() throws Exception
+	public void importData()
 	{
-		fieldSearcher = loadSearcher(context);
+		try
+		{
+			fieldSearcher = loadSearcher(context);
 
-		// Page uploadedpage = (Page)context.getPageValue("uploadedpage");
-		// if( uploadedpage == null )
-		// {
-		// uploadedpage = getPageManager().getPage("/WEB-INF/import/recipe1.xml");
-		// }
-		ContentItem item = getMediaArchive().getOriginalContent(getAsset());
-		Reader reader = new InputStreamReader(item.getInputStream(), "UTF-8");
+			// Page uploadedpage = (Page)context.getPageValue("uploadedpage");
+			// if( uploadedpage == null )
+			// {
+			// uploadedpage = getPageManager().getPage("/WEB-INF/import/recipe1.xml");
+			// }
+			ContentItem item = getMediaArchive().getOriginalContent(getAsset());
+			Reader reader = new InputStreamReader(item.getInputStream(), "UTF-8");
 
-		XmlUtil util = (XmlUtil) getMediaArchive().getBean("xmlUtil");
-		Element root = util.getXml(reader, "UTF-8");
+			XmlUtil util = (XmlUtil) getMediaArchive().getBean("xmlUtil");
+			Element root = util.getXml(reader, "UTF-8");
 
-		processXml(root);
-
+			processXml(root);
+		}
+		catch (Exception e)
+		{
+			throw new OpenEditException(e);
+		}
 	}
 
 	private void processXml(Element root)
@@ -253,11 +259,10 @@ public class DitaImporter extends BaseImporter
 		{
 			type = "root";
 		}
-		else
-			if (inParent.getLevel() == 2)
-			{
-				type = "connector";
-			}
+		else if (inParent.getLevel() == 2)
+		{
+			type = "connector";
+		}
 
 		if (type == null)
 		{

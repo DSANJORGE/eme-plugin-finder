@@ -58,7 +58,7 @@ public class AdaptiveTutorialBaseSkill extends BaseSkill
 
 		for (MultiValued message : messages)
 		{
-			Map<String, Object> agentContext = getAgentContext(message);	
+			Map<String, Object> agentContext = getAgentContext(message);
 
 			if (agentContext == null || !sectionId.equals(agentContext.get("sectionid")))
 			{
@@ -133,12 +133,12 @@ public class AdaptiveTutorialBaseSkill extends BaseSkill
 	{
 		Object agentContextObj = message.getValue("agentcontextvalues");
 		Map<String, Object> agentContext = null;
-		if( agentContextObj instanceof String)
+		if (agentContextObj instanceof String)
 		{
 			String agentContextStr = (String) agentContextObj;
 			agentContext = new JSONParser().parseMap(agentContextStr);
-			message.setValue("agentcontextvalues",agentContext); //For next time
-		}	
+			message.setValue("agentcontextvalues", agentContext); // For next time
+		}
 		else
 		{
 			agentContext = (Map<String, Object>) agentContextObj;

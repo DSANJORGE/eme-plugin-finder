@@ -78,6 +78,8 @@ public interface AgentContext extends Data
 
 	void put(String inKey, Object inValue);
 	void putAll(Map<String, Object> inMap);
+	
+	void putRoot(String inKey, Object inValue);
 
 	/**
 	 * @deprecated use put()

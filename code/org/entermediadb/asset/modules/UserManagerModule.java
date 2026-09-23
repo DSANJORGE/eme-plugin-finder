@@ -1081,6 +1081,7 @@ public class UserManagerModule extends BaseMediaModule
 		inReq.putPageValue(name, hits);
 		inReq.putSessionValue(hits.getSessionId(), hits);
 		inReq.putPageValue("searcher", usersearcher);
+		inReq.putPageValue("userhitssessionid", hits.getSessionId());
 	}
 
 	public void findUsersInGroup(WebPageRequest inReq)
@@ -1280,7 +1281,7 @@ public class UserManagerModule extends BaseMediaModule
 		{
 			hits = getUserSearcher(inReq).getAllHits();
 		}
-		inReq.putPageValue("hits", hits);
+		inReq.putPageValue("userhits", hits);
 	}
 
 	public void loadPageOfGroupResults(WebPageRequest inReq)

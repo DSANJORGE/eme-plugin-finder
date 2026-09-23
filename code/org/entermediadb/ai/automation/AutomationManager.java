@@ -157,11 +157,11 @@ public class AutomationManager extends BaseAiManager implements WebEventListener
 		inContext.setCurrentScenario(running);
 
 		AutomationStep enabled = inContext.getCurrentAutomationStep();
-		if (enabled == null)
-		{
-			enabled = running.getEnabledAgents().iterator().next();
-			inContext.setCurrentAutomationStep(enabled);
-		}
+		// if (enabled == null)
+		// {
+		// 	enabled = running.getEnabledAgents().iterator().next();
+		// 	inContext.setCurrentAutomationStep(enabled);
+		// }
 		AgentContext inCurrentContext = running.createAgentContext(inContext, enabled);
 		running.runProcess(enabled, inCurrentContext);
 	}

@@ -21,7 +21,7 @@ public class RunningScenario extends BaseMediaObject implements CatalogEnabled
 {
 	private static final Log log = LogFactory.getLog(RunningScenario.class);
 
-	Collection<AutomationStep> fieldAgentsEnabled;
+	//Collection<AutomationStep> fieldAgentsEnabled;
 
 	public String fieldId;
 
@@ -33,16 +33,6 @@ public class RunningScenario extends BaseMediaObject implements CatalogEnabled
 	public void setId(String inId)
 	{
 		fieldId = inId;
-	}
-
-	public Collection<AutomationStep> getAgentsEnabled()
-	{
-		return fieldAgentsEnabled;
-	}
-
-	public void setAgentsEnabled(Collection<AutomationStep> agentsEnabled)
-	{
-		fieldAgentsEnabled = agentsEnabled;
 	}
 
 	protected MultiValued fieldScenarioData;
@@ -104,7 +94,7 @@ public class RunningScenario extends BaseMediaObject implements CatalogEnabled
 		}
 		else if ("runskill".equals(response.getOperationState()))
 		{
-			String runskill = response.getRunSkillEnabled();
+			String runskill = response.getExecAutomationSkill();
 			runProcess(runskill, inContext);
 			return false;
 		}
@@ -120,20 +110,34 @@ public class RunningScenario extends BaseMediaObject implements CatalogEnabled
 		return true;
 	}
 
-	public boolean runProcess(String inEnabledId, AgentContext inContext)
+	public boolean runProcess(String inFunctionParts, AgentContext inContext)
 	{
-
-		AutomationStep enabled = findEnabled(getEnabledAgents(), inEnabledId);
-
-		if (enabled == null)
+		log.info("Running scenario: " + inFunctionParts );
+		String[] parts = inFunctionParts.split("\\.");
+		String stepid = null;
+		RunningScenario runningScenario = this;
+		if(parts.length > 1)
 		{
-			log.error("Could not find enabled agent " + inEnabledId + " for scenario " + getId());
+			String scenario = parts[0];
+			runningScenario = (RunningScenario) getMediaArchive().getBean("runningscenario", false);
+			runningScenario.setId(scenario);
+			inContext.setCurrentScenario(runningScenario);
+			stepid = parts[1];
+		}
+		else
+		{
+			stepid = parts[0];	
+		}
+		// we are on a task, or answering questions or another sceneration.
+
+		AutomationStep stepEnabled = runningScenario.findEnabled(stepid);
+		if (stepEnabled == null)
+		{
+			log.error("No skill enabled found for id: " + stepid);
 			return false;
 		}
-
-		AgentContext inCurrentContext = createAgentContext(inContext, enabled);
-
-		return runProcess(enabled, inCurrentContext);
+		AgentContext inCurrentContext = runningScenario.createAgentContext(inContext, stepEnabled);
+		return runningScenario.runProcess(stepEnabled, inCurrentContext);
 	}
 
 	public AutomationStep findEnabled(String inEnabledId)

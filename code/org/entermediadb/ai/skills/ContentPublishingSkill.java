@@ -918,7 +918,7 @@ public class ContentPublishingSkill extends BaseSkill implements CatalogEnabled
 				targetsearcher.updateData(child, args);
 			}
 			child.setValue("entity_date", new Date());
-			child.setValue("ai-functioncall", results.getRunSkillEnabled());
+			child.setValue("ai-functioncall", results.getExecAutomationSkill());
 			child.setValue("owner", inContentrequest.get("owner"));
 			targetsearcher.saveData(child);
 

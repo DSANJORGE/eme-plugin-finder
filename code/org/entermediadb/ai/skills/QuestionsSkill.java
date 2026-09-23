@@ -60,13 +60,13 @@ public class QuestionsSkill extends BaseSkill
 		LlmResponse response = llmconnection.renderLocalAction(messageContext, agentFn);
 		if (aisuggestions.isEmpty())
 		{
-			response.setRunSkillEnabled("question_create_suggestions");
+			response.setExecAutomationSkill("question_create_suggestions");
 			messageContext.setLastResponse(response);
 			super.process(inAgentContext);
 		}
 		else
 		{
-			response.setNextSkillEnabled("question_ask");
+			response.setNextAutomationStep("question_ask");
 			messageContext.setLastResponse(response);
 			messageContext.setWaitTime(null);
 			AutomationStep skillEnabled = messageContext.getCurrentAutomationStep();

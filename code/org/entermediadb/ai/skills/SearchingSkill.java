@@ -56,7 +56,7 @@ public class SearchingSkill extends BaseSkill
 			LlmConnection llmconnection = getMediaArchive().getLlmConnection("localrender"); // Should stay
 																								// search_start
 			LlmResponse response = llmconnection.renderLocalAction(messageContext, agentFn);
-			response.setNextSkillEnabled("search_parse");
+			response.setNextAutomationStep("search_parse");
 			messageContext.setLastResponse(response);
 			return;
 		}
@@ -106,7 +106,7 @@ public class SearchingSkill extends BaseSkill
 				}
 				else
 				{
-					res.setRunSkillEnabled("search_tables");
+					res.setExecAutomationSkill("search_tables");
 				}
 				messageContext.setLastResponse(res);
 				return;
@@ -122,7 +122,7 @@ public class SearchingSkill extends BaseSkill
 					String message = response.getMessage();
 					messageContext.setMessagePrefix(message);
 
-					response.setRunSkillEnabled("search_semantic");
+					response.setExecAutomationSkill("search_semantic");
 
 					messageContext.setLastResponse(response);
 					return;
@@ -177,7 +177,7 @@ public class SearchingSkill extends BaseSkill
 						}
 						inAgentContext.setMessagePrefix(null);
 						// Set next function to be able to search again
-						result.setNextSkillEnabled("search_parse");
+						result.setNextAutomationStep("search_parse");
 						messageContext.setLastResponse(result);
 						return;
 

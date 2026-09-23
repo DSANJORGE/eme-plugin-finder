@@ -170,20 +170,17 @@ public class BaseAgentContext extends BaseData implements CatalogEnabled, AgentC
 
 	protected String fieldCatalogId;
 
-	protected RunningScenario fieldCurrentScenario;
-
 	public RunningScenario getCurrentScenario()
 	{
-		if (fieldCurrentScenario == null && getParentContext() != null)
-		{
-			return getParentContext().getCurrentScenario();
-		}
-		return fieldCurrentScenario;
+		RunningScenario scenario = (RunningScenario) getRootContext().getContextValue("currentscenario");
+		return scenario;
 	}
 
 	public void setCurrentScenario(RunningScenario inCurrentScenario)
 	{
-		fieldCurrentScenario = inCurrentScenario;
+		//fieldCurrentScenario = inCurrentScenario;
+		putRoot("currentscenario", inCurrentScenario);
+
 		if (inCurrentScenario != null)
 		{
 			setValue("currentscenario", inCurrentScenario.getId());
@@ -201,6 +198,14 @@ public class BaseAgentContext extends BaseData implements CatalogEnabled, AgentC
 		if (fieldCurrentAutomationStep == null && getParentContext() != null)
 		{
 			return getParentContext().getCurrentAutomationStep();
+		}
+		if( fieldCurrentAutomationStep == null && getCurrentScenario() != null)
+		{
+			Collection<AutomationStep> enabled = getCurrentScenario().getEnabledAgents();
+			if( enabled != null && enabled.size() > 0)
+			{
+				fieldCurrentAutomationStep = enabled.iterator().next();
+			}
 		}
 		return fieldCurrentAutomationStep;
 	}
@@ -385,6 +390,11 @@ public class BaseAgentContext extends BaseData implements CatalogEnabled, AgentC
 	public void addContext(String inKey, Object inValue)
 	{
 		put(inKey, inValue);
+	}
+
+	public void putRoot(String inKey, Object inValue)
+	{
+		getRootContext().getContext().put(inKey, inValue);
 	}
 
 	public void put(String inKey, Object inValue)
@@ -709,7 +719,7 @@ public class BaseAgentContext extends BaseData implements CatalogEnabled, AgentC
 
 	public void setLastResponse(LlmResponse inLastResponse)
 	{
-		putContextValue("lastresponse", inLastResponse);
+		putRoot("lastresponse", inLastResponse);
 	}
 
 	public JSONObject toJSON()

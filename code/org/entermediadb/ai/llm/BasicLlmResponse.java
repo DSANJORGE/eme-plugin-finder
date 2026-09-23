@@ -46,6 +46,13 @@ public class BasicLlmResponse implements LlmResponse
 		return fieldMessage;
 
 	}
+		@Override
+	public void setMessage(String inMessage)
+	{
+		fieldMessage = inMessage;
+	}
+
+
 
 	public void setMessagePlain(String inMessage)
 	{
@@ -101,12 +108,12 @@ public class BasicLlmResponse implements LlmResponse
 	}
 
 	@Override
-	public String getRunSkillEnabled()
+	public String getExecAutomationSkill()
 	{
 		return fieldRunFunctionName;
 	}
 
-	public void setRunSkillEnabled(String inFunctionName)
+	public void setExecAutomationSkill(String inFunctionName)
 	{
 		fieldRunFunctionName = inFunctionName;
 	}
@@ -156,12 +163,6 @@ public class BasicLlmResponse implements LlmResponse
 	}
 
 	@Override
-	public void setMessage(String inMessage)
-	{
-		fieldMessage = inMessage;
-	}
-
-	@Override
 	public void setRawCollection(Collection inObj)
 	{
 		fieldRawCollection = inObj;
@@ -188,12 +189,12 @@ public class BasicLlmResponse implements LlmResponse
 		return getResponsePayload();
 	}
 
-	public void setNextSkillEnabled(String inFunction)
+	public void setNextAutomationStep(String inFunction)
 	{
 		fieldNextFunctionName = inFunction;
 	}
 
-	public String getNextSkillEnabled()
+	public String getNextAutomationStep()
 	{
 		return fieldNextFunctionName;
 	}

@@ -15,7 +15,6 @@ import org.apache.commons.logging.LogFactory;
 import org.entermediadb.ai.assistant.SemanticAction;
 import org.entermediadb.ai.automation.AutomationManager;
 import org.entermediadb.ai.classify.SemanticTableManager;
-import org.entermediadb.ai.llm.LlmConnection;
 import org.entermediadb.ai.llm.LlmResponse;
 import org.entermediadb.asset.util.JsonUtil;
 import org.entermediadb.manager.BaseMediaObject;
@@ -38,21 +37,19 @@ public class BaseAiManager extends BaseMediaObject
 
 	private static final Log log = LogFactory.getLog(BaseAiManager.class);
 
-	public LlmResponse handleError(AgentContext inAgentContext, String inError)
+	public void handleError(AgentContext inAgentContext, String inError)
 	{
-		return handleError(inAgentContext, inError, 200);
+		handleError(inAgentContext, inError, 200);
 	}
 
-	public LlmResponse handleError(AgentContext inAgentContext, String inError, int inCode)
+	public void handleError(AgentContext inAgentContext, String inError, int inCode)
 	{
 		inAgentContext.addContext("error", inError);
 		inAgentContext.addContext("errorcode", inCode);
-		LlmConnection llmconnection = getMediaArchive().getLlmConnection("localrender");
-		LlmResponse response = llmconnection.renderLocalAction(inAgentContext, "render_error");
-		// inAgentContext.setFunctionName(null);
-		response.setRunSkillEnabled(null);
-		inAgentContext.setLastResponse(response);
-		return response;
+
+		Skill skill = (Skill) getMediaArchive().getBean("handleErrorSkill");
+		skill.process(inAgentContext);
+
 	}
 
 	protected Schema loadSchema()

@@ -8,13 +8,13 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-
 import org.entermediadb.asset.util.CSVReader;
 import org.entermediadb.asset.util.ImportFile;
 import org.entermediadb.asset.util.Row;
 import org.entermediadb.scripts.EnterMediaObject;
 import org.openedit.Data;
 import org.openedit.MultiValued;
+import org.openedit.OpenEditException;
 import org.openedit.data.BaseData;
 import org.openedit.data.PropertyDetail;
 import org.openedit.data.PropertyDetails;
@@ -170,115 +170,122 @@ public class BaseImporter extends EnterMediaObject
 		fieldImportPage = inImportPage;
 	}
 
-	public void importData() throws Exception
+	public void importData()
 	{
-		fieldSearcher = loadSearcher(context);
-
-		if (fieldImportPage == null)
-		{
-			String importpath = context.findValue("importpath");
-			fieldImportPage = getPageManager().getPage(importpath);
-		}
-		Reader reader = fieldImportPage.getReader();
-		ArrayList data = new ArrayList();
-		int rowNum = 0;
 		try
 		{
-			ImportFile file = new ImportFile();
-			file.setParser(new CSVReader(reader, getSeparator(), '\"'));
-			file.read(reader);
+			
 
-			Row trow = null;
-			while ((trow = file.getNextRow()) != null)
+			if (fieldImportPage == null)
 			{
-				rowNum++;
+				String importpath = context.findValue("importpath");
+				fieldImportPage = getPageManager().getPage(importpath);
+			}
+			Reader reader = fieldImportPage.getReader();
+			ArrayList data = new ArrayList();
+			int rowNum = 0;
+			try
+			{
+				ImportFile file = new ImportFile();
+				file.setParser(new CSVReader(reader, getSeparator(), '\"'));
+				file.read(reader);
 
-				if (skipRow(trow))
+				Row trow = null;
+				while ((trow = file.getNextRow()) != null)
 				{
-					continue;
-				}
-				Data target = findExistingRecord(trow);
-				if (target != null && !isUpdateData())
-				{
-					continue;
-				}
+					rowNum++;
 
-				if (target == null)
-				{
-					String idCell = trow.get("id");
-					if (idCell == null)
+					if (skipRow(trow))
 					{
-						idCell = trow.get("ID");
+						continue;
 					}
-					if (fieldStripPrefix)
+					Data target = findExistingRecord(trow);
+					if (target != null && !isUpdateData())
 					{
-						if (idCell.startsWith(getPrefix()))
+						continue;
+					}
+
+					if (target == null)
+					{
+						String idCell = trow.get("id");
+						if (idCell == null)
 						{
-							idCell = idCell.substring(getPrefix().length(), idCell.length());
+							idCell = trow.get("ID");
 						}
-					}
-
-					PropertyDetail parent = getSearcher().getDetail("_parent");
-					String parentid = null;
-					if (parent != null)
-					{
-						parentid = trow.get("_parent");
-						if (parentid != null)
+						if (fieldStripPrefix)
 						{
-							target = findExistingData(idCell, parentid);
+							if (idCell.startsWith(getPrefix()))
+							{
+								idCell = idCell.substring(getPrefix().length(), idCell.length());
+							}
 						}
-					}
 
-					if (target == null && idCell != null && idCell.trim().length() > 0)
-					{
-						target = findExistingData(idCell, null);
-					}
-
-					if (isAddNewData() && target == null)
-					{
-						target = getSearcher().createNewData();
-						target.setId(idCell); // could be null
+						PropertyDetail parent = getSearcher().getDetail("_parent");
+						String parentid = null;
 						if (parent != null)
 						{
-							target.setProperty("_parent", parentid);
+							parentid = trow.get("_parent");
+							if (parentid != null)
+							{
+								target = findExistingData(idCell, parentid);
+							}
 						}
-					}
-					else
-						if (isMakeId())
+
+						if (target == null && idCell != null && idCell.trim().length() > 0)
+						{
+							target = findExistingData(idCell, null);
+						}
+
+						if (isAddNewData() && target == null)
+						{
+							target = getSearcher().createNewData();
+							target.setId(idCell); // could be null
+							if (parent != null)
+							{
+								target.setProperty("_parent", parentid);
+							}
+						}
+						else if (isMakeId())
 						{
 							target = getSearcher().createNewData();
 							idCell = getSearcher().nextId();
 						}
+						if (target == null)
+						{
+							continue;
+						}
+						target.setId(idCell);
+					}
 					if (target == null)
 					{
 						continue;
 					}
-					target.setId(idCell);
+					fieldLastNonSkipData = target;
+					addProperties(trow, target);
+					data.add(target);
+					if (data.size() == 3000)
+					{
+						getSearcher().saveAllData(data, null);
+						log.info("imported 3000");
+						data.clear();
+					}
 				}
-				if (target == null)
-				{
-					continue;
-				}
-				fieldLastNonSkipData = target;
-				addProperties(trow, target);
-				data.add(target);
-				if (data.size() == 3000)
-				{
-					getSearcher().saveAllData(data, context.getUser());
-					log.info("imported 3000");
-					data.clear();
-				}
+				file.close();
 			}
-			file.close();
+			finally
+			{
+				FileUtils.safeClose(reader);
+				getPageManager().removePage(getImportPage());
+			}
+			getSearcher().saveAllData(data, null);
+			log.info("imported " + rowNum);
+			importTotal = rowNum;
 		}
-		finally
+		catch (Exception e)
 		{
-			FileUtils.safeClose(reader);
-			getPageManager().removePage(getImportPage());
+			log.error("Error importing data", e);
+			throw new OpenEditException(e);
 		}
-		getSearcher().saveAllData(data, context.getUser());
-		log.info("imported " + rowNum);
-		importTotal = rowNum;
 	}
 
 	public int getImportTotal()
@@ -601,29 +608,27 @@ public class BaseImporter extends EnterMediaObject
 						}
 						fixedvalue = collection;
 					}
-					else
-						if (detail.isNumber())
+					else if (detail.isNumber())
+					{
+						if ("double".equals(detail.getDataType()))
 						{
-							if ("double".equals(detail.getDataType()))
-							{
-								Collection dvalues = MultiValued.collectDoubles(values);
-								fixedvalue = dvalues;
-							}
-							else
-								if ("float".equals(detail.getDataType()))
-								{
-									Collection dvalues = MultiValued.collectFloats(values);
-									fixedvalue = dvalues;
-								}
-								else
-								{
-									fixedvalue = Arrays.asList(values);
-								}
+							Collection dvalues = MultiValued.collectDoubles(values);
+							fixedvalue = dvalues;
+						}
+						else if ("float".equals(detail.getDataType()))
+						{
+							Collection dvalues = MultiValued.collectFloats(values);
+							fixedvalue = dvalues;
 						}
 						else
 						{
 							fixedvalue = Arrays.asList(values);
 						}
+					}
+					else
+					{
+						fixedvalue = Arrays.asList(values);
+					}
 				}
 				else
 				{

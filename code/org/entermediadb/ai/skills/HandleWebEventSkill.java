@@ -38,14 +38,14 @@ public class HandleWebEventSkill extends BaseSkill
 			inContext.put("triggersiteroot", request.getSiteRoot());
 
 			inContext.setUserProfile(request.getUserProfile());
-
+			inContext.put("nextautomationstep", request.findValue("nextautomationstep"));
 			request.putPageValue("currentagentcontext", inContext);
 
-			String nextSkillEnabledId = request.findValue("nextskillenabledid");
-			if (nextSkillEnabledId != null)
+			String nextAutomationStep = request.findValue("nextautomationstep");
+			if (nextAutomationStep != null)
 			{
-				inContext.put("nextskillenabledid", nextSkillEnabledId);
-				AutomationStep currentAutomationStep = inContext.getCurrentScenario().findEnabled(nextSkillEnabledId);
+				inContext.put("nextautomationstep", nextAutomationStep);
+				AutomationStep currentAutomationStep = inContext.getCurrentScenario().findEnabled(nextAutomationStep);
 				inContext.setCurrentAutomationStep(currentAutomationStep);
 				currentAutomationStep.getAgent().process(inContext);
 				return;

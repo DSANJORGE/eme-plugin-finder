@@ -34,13 +34,13 @@ public interface LlmResponse
 
     void setRawMessage(String inMessage);
 
-    String getRunSkillEnabled();
+    String getExecAutomationSkill();
 
-    void setRunSkillEnabled(String inFunction);
+    void setExecAutomationSkill(String inFunction);
 
-    String getNextSkillEnabled();
+    String getNextAutomationStep();
 
-    void setNextSkillEnabled(String inFunction);
+    void setNextAutomationStep(String inFunction);
 
     JSONObject getFunctionArguments();
 

@@ -230,6 +230,8 @@ public class MediaSearchModule extends BaseMediaModule
 
 		tracker = assetsearcher.cachedSearch(inPageRequest, search);
 
+		log.info(tracker.getQuery());
+
 		if (tracker != null)
 		{
 			// TODO: Seems like this could be done within the searcher or something

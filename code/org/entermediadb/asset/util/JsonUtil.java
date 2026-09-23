@@ -326,4 +326,26 @@ public class JsonUtil
 		obj = (JSONObject) parser.parse(inText);
 		return obj;
 	}
+
+	public static Object getObjectFromMaps(String path, Map<String,Map> inMap)
+	{
+		if (inMap == null || path == null)
+		{
+			return null;
+		}
+		String[] keys = path.split("\\.");
+		Object current = inMap;
+		for (String key : keys)
+		{
+			if (current instanceof Map)
+			{
+				current = ((Map) current).get(key);
+			}
+			else
+			{
+				return null;
+			}
+		}
+		return current;
+	}
 }
