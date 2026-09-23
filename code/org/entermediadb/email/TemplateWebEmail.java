@@ -110,8 +110,7 @@ public class TemplateWebEmail extends WebEmail implements Data
 			StringBuffer attachments = new StringBuffer();
 			for (Iterator iterator = getFileAttachments().iterator(); iterator.hasNext();)
 			{
-				String filename = (String) iterator.next();
-				attachments.append(filename);
+				attachments.append(String.valueOf(iterator.next())); // an inline image is not a file name
 
 			}
 			return attachments.toString();
