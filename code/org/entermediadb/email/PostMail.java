@@ -44,6 +44,25 @@ import org.openedit.page.manage.PageManager;
 public class PostMail
 {
 	private static final Log log = LogFactory.getLog(PostMail.class);
+
+	/**
+	 * An image carried inside the message and shown by the HTML part as src="cid:&lt;cid&gt;", instead of a link the mail client
+	 * has to fetch (Gmail proxies images and cannot reach a private or local host). Put one in the attachment list of any postMail
+	 * call: entries that are file names still become ordinary attachments.
+	 */
+	public static class InlineImage
+	{
+		public InlineImage(String inCid, String inContentType, byte[] inData)
+		{
+			cid = inCid;
+			contenttype = inContentType;
+			data = inData;
+		}
+
+		public final String cid;
+		public final String contenttype;
+		public final byte[] data;
+	}
 	protected String fieldSmtpUsername = "noreply";
 	protected String fieldSmtpPassword = "whitelistip";
 	protected String fieldSmtpServer = "smtp.entermediadb.org";
@@ -234,68 +253,10 @@ public class PostMail
 
 		// create a message
 		Message msg = new MimeMessage(session);
-		MimeMultipart mp = null;
 		// msg.setDataHandler(new DataHandler(new ByteArrayDataSource(message,
 		// "text/html")));
 
-		if (inAttachments != null && inAttachments.size() == 0)
-		{
-			inAttachments = null;
-		}
-
-		if (inText != null && inHtml != null || inAttachments != null)
-		{
-			// Create an "Alternative" Multipart message
-			mp = new MimeMultipart("mixed");
-
-			if (inText != null)
-			{
-				BodyPart messageBodyPart = new MimeBodyPart();
-
-				messageBodyPart.setContent(inText, "text/plain; charset=UTF-8");
-				mp.addBodyPart(messageBodyPart);
-			}
-			if (inHtml != null)
-			{
-				BodyPart messageBodyPart = new MimeBodyPart();
-				messageBodyPart.setContent(inHtml, "text/html; charset=UTF-8");
-				mp.addBodyPart(messageBodyPart);
-			}
-			if (inAttachments != null)
-			{
-				for (Iterator iterator = inAttachments.iterator(); iterator.hasNext();)
-				{
-					String filename = (String) iterator.next();
-
-					File file = new File(filename);
-
-					if (file.exists() && !file.isDirectory())
-					{
-						// create the second message part
-						MimeBodyPart mbp = new MimeBodyPart();
-
-						FileDataSource fds = new FileDataSource(file);
-						mbp.setDataHandler(new DataHandler(fds));
-
-						mbp.setFileName(fds.getName());
-
-						mp.addBodyPart(mbp);
-					}
-				}
-			}
-
-			msg.setContent(mp);
-
-		}
-		else
-			if (inHtml != null)
-			{
-				msg.setContent(inHtml, "text/html; charset=UTF-8");
-			}
-			else
-			{
-				msg.setContent(inText, "text/plain; charset=UTF-8");
-			}
+		setBody(msg, inHtml, inText, inAttachments);
 		// set the from and to address
 		msg.setFrom(from);
 		// msg.setRecipient(RecipientType.BCC, addressFrom);
@@ -330,6 +291,146 @@ public class PostMail
 
 		log.info("Sending email from: " + Arrays.asList(msg.getFrom()) + " To: " + Arrays.asList(addressTo) + " Subject: " + subject);
 		Transport.send(msg);
+	}
+
+	/** Adds each existing file of inAttachments (file names) to inMultipart. Nothing when there are none. */
+	protected void addFileAttachments(MimeMultipart inMultipart, List inAttachments) throws MessagingException
+	{
+		if (inAttachments == null)
+		{
+			return;
+		}
+		for (Iterator iterator = inAttachments.iterator(); iterator.hasNext();)
+		{
+			String filename = String.valueOf(iterator.next());
+
+			File file = new File(filename);
+
+			if (file.exists() && !file.isDirectory())
+			{
+				MimeBodyPart mbp = new MimeBodyPart();
+
+				FileDataSource fds = new FileDataSource(file);
+				mbp.setDataHandler(new DataHandler(fds));
+
+				mbp.setFileName(fds.getName());
+
+				inMultipart.addBodyPart(mbp);
+			}
+		}
+	}
+
+	/**
+	 * Fills inMessage with the body: the HTML and/or text, the inline images of inAttachments (multipart/related, referenced by the
+	 * HTML as cid:) and its file names as attachments. Split out of postMail so the shape of a message can be checked without a
+	 * mail server.
+	 */
+	public void setBody(Message msg, String inHtml, String inText, List inAttachments) throws MessagingException
+	{
+		MimeMultipart mp = null;
+		// Inline images (if any) travel with the HTML part in a "related" multipart; file names stay ordinary attachments.
+		List<InlineImage> inlineimages = null;
+		if (inAttachments != null)
+		{
+			List files = new ArrayList();
+			for (Object item : inAttachments)
+			{
+				if (item instanceof InlineImage)
+				{
+					if (inlineimages == null)
+					{
+						inlineimages = new ArrayList<InlineImage>();
+					}
+					inlineimages.add((InlineImage) item);
+				}
+				else
+				{
+					files.add(item);
+				}
+			}
+			inAttachments = files;
+		}
+		if (inAttachments != null && inAttachments.size() == 0)
+		{
+			inAttachments = null;
+		}
+		MimeMultipart related = null;
+		if (inlineimages != null && inHtml != null)
+		{
+			related = new MimeMultipart("related");
+			BodyPart htmlpart = new MimeBodyPart();
+			htmlpart.setContent(inHtml, "text/html; charset=UTF-8");
+			related.addBodyPart(htmlpart);
+			for (InlineImage image : inlineimages)
+			{
+				MimeBodyPart part = new MimeBodyPart();
+				part.setDataHandler(new DataHandler(new ByteArrayDataSource(image.data, image.contenttype)));
+				part.setContentID("<" + image.cid + ">");
+				part.setDisposition(MimeBodyPart.INLINE);
+				part.setFileName(image.cid);
+				related.addBodyPart(part);
+			}
+			if (inText == null && inAttachments == null)
+			{
+				msg.setContent(related); // just the HTML and its images
+				inHtml = null; // handled
+			}
+		}
+
+		if (related != null && inHtml != null)
+		{
+			// text and/or file attachments alongside: the related part becomes one part of the mixed message
+			mp = new MimeMultipart("mixed");
+			if (inText != null)
+			{
+				BodyPart textpart = new MimeBodyPart();
+				textpart.setContent(inText, "text/plain; charset=UTF-8");
+				mp.addBodyPart(textpart);
+			}
+			BodyPart relatedpart = new MimeBodyPart();
+			relatedpart.setContent(related);
+			mp.addBodyPart(relatedpart);
+			addFileAttachments(mp, inAttachments);
+			msg.setContent(mp);
+		}
+		else
+			if (related != null)
+			{
+				// already set above
+			}
+			else
+				if (inText != null && inHtml != null || inAttachments != null)
+		{
+			// Create an "Alternative" Multipart message
+			mp = new MimeMultipart("mixed");
+
+			if (inText != null)
+			{
+				BodyPart messageBodyPart = new MimeBodyPart();
+
+				messageBodyPart.setContent(inText, "text/plain; charset=UTF-8");
+				mp.addBodyPart(messageBodyPart);
+			}
+			if (inHtml != null)
+			{
+				BodyPart messageBodyPart = new MimeBodyPart();
+				messageBodyPart.setContent(inHtml, "text/html; charset=UTF-8");
+				mp.addBodyPart(messageBodyPart);
+			}
+			addFileAttachments(mp, inAttachments);
+
+			msg.setContent(mp);
+
+		}
+		else
+			if (inHtml != null)
+			{
+				msg.setContent(inHtml, "text/html; charset=UTF-8");
+			}
+			else
+			{
+				msg.setContent(inText, "text/plain; charset=UTF-8");
+			}
 	}
 
 	public int getPort()
