@@ -11,7 +11,11 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.common.xcontent.XContentBuilder;
+import org.elasticsearch.index.query.BoolQueryBuilder;
+import org.elasticsearch.index.query.QueryBuilders;
+import org.elasticsearch.search.SearchHit;
 import org.openedit.Data;
 import org.openedit.OpenEditException;
 import org.openedit.data.PropertyDetails;
@@ -111,14 +115,24 @@ public class ElasticUserSearcher extends ElasticListSearcher implements UserSear
 		if (inEmail != null)
 		{
 			inEmail = inEmail.trim();
-			// email is a not_analyzed keyword, so matching is case-sensitive. Accept either spelling:
-			// records saved before saveData/saveAllData normalized them may still be upper case.
-			Data record = (Data) query().or().match("email", inEmail).match("email", inEmail.toLowerCase()).sort("enabledDown").searchOne();
-			if (record != null)
+			// Raw term queries, not match(): match() follows the field XML (analyzed -> "email.sort"), but each index keeps
+			// the mapping it was created with (not_analyzed "email", or analyzed with "email.exact"), and the XML has flipped
+			// between the two, so a mismatch found nobody. Query both mappings; a missing field just matches nothing.
+			// Both spellings too: records saved before saveData/saveAllData normalized them may still be upper case.
+			String lower = inEmail.toLowerCase();
+			BoolQueryBuilder any = QueryBuilders.boolQuery()
+				.should(QueryBuilders.termQuery("email", inEmail)).should(QueryBuilders.termQuery("email", lower))
+				.should(QueryBuilders.termQuery("email.exact", inEmail)).should(QueryBuilders.termQuery("email.exact", lower));
+			SearchResponse response = getClient().prepareSearch(toId(getCatalogId())).setTypes(getSearchType()).setQuery(any).setSize(10).get();
+			for (SearchHit hit : response.getHits().getHits())
 			{
-				target = (User) loadData(record);
+				User user = (User) loadData((Data) searchById(hit.getId()));
+				if (user != null && (target == null || (!target.isEnabled() && user.isEnabled())))
+				{
+					target = user;
+				}
 			}
-			else
+			if (target == null)
 			{
 				log.info("User not found: " + inEmail);
 			}
