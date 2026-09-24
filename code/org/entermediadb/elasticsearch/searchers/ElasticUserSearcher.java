@@ -11,11 +11,7 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.common.xcontent.XContentBuilder;
-import org.elasticsearch.index.query.BoolQueryBuilder;
-import org.elasticsearch.index.query.QueryBuilders;
-import org.elasticsearch.search.SearchHit;
 import org.openedit.Data;
 import org.openedit.OpenEditException;
 import org.openedit.data.PropertyDetails;
@@ -115,24 +111,14 @@ public class ElasticUserSearcher extends ElasticListSearcher implements UserSear
 		if (inEmail != null)
 		{
 			inEmail = inEmail.trim();
-			// Raw term queries, not match(): match() follows the field XML (analyzed -> "email.sort"), but each index keeps
-			// the mapping it was created with (not_analyzed "email", or analyzed with "email.exact"), and the XML has flipped
-			// between the two, so a mismatch found nobody. Query both mappings; a missing field just matches nothing.
-			// Both spellings too: records saved before saveData/saveAllData normalized them may still be upper case.
-			String lower = inEmail.toLowerCase();
-			BoolQueryBuilder any = QueryBuilders.boolQuery()
-				.should(QueryBuilders.termQuery("email", inEmail)).should(QueryBuilders.termQuery("email", lower))
-				.should(QueryBuilders.termQuery("email.exact", inEmail)).should(QueryBuilders.termQuery("email.exact", lower));
-			SearchResponse response = getClient().prepareSearch(toId(getCatalogId())).setTypes(getSearchType()).setQuery(any).setSize(10).get();
-			for (SearchHit hit : response.getHits().getHits())
+			// Data record = (Data)query().or().startsWith("email",
+			// inEmail).startsWith("email", inEmail.toLowerCase()).searchOne();
+			Data record = (Data) query().match("email", inEmail).sort("enabledDown").searchOne();
+			if (record != null)
 			{
-				User user = (User) loadData((Data) searchById(hit.getId()));
-				if (user != null && (target == null || (!target.isEnabled() && user.isEnabled())))
-				{
-					target = user;
-				}
+				target = (User) loadData(record);
 			}
-			if (target == null)
+			else
 			{
 				log.info("User not found: " + inEmail);
 			}
@@ -157,34 +143,6 @@ public class ElasticUserSearcher extends ElasticListSearcher implements UserSear
 	public void saveUsers(List userstosave, User inUser)
 	{
 		saveAllData(userstosave, inUser);
-	}
-
-	// Email is the login key and a case-sensitive keyword field: store it lower case so
-	// getUserByEmail finds the user whatever the sign-in form typed.
-	protected void normalizeEmail(Data inData)
-	{
-		String email = inData.get("email");
-		if (email != null)
-		{
-			inData.setValue("email", email.trim().toLowerCase());
-		}
-	}
-
-	@Override
-	public void saveData(Data inData, User inUser)
-	{
-		normalizeEmail(inData);
-		super.saveData(inData, inUser);
-	}
-
-	@Override
-	public void saveAllData(Collection<Data> inAll, User inUser)
-	{
-		for (Data data : inAll)
-		{
-			normalizeEmail(data);
-		}
-		super.saveAllData(inAll, inUser);
 	}
 
 	@Override
