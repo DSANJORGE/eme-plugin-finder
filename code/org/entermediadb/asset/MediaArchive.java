@@ -25,6 +25,7 @@ import javax.mail.internet.InternetAddress;
 import org.apache.commons.lang3.time.DurationFormatUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.entermediadb.ai.llm.FailoverLlmConnection;
 import org.entermediadb.ai.llm.LlmConnection;
 import org.entermediadb.asset.convert.ConversionManager;
 import org.entermediadb.asset.convert.ConvertInstructions;
@@ -3412,22 +3413,45 @@ public class MediaArchive implements CatalogEnabled
 
 		if (connection == null)
 		{
-
-			Data serverinfo = query("aiserver").exact("aiservertype", inServerType).sort("ordering").searchOne();
-			if (serverinfo == null)
+			// Every enabled record of the type, in ordering order: the first answers, the rest are fallbacks
+			List<Data> servers = new ArrayList<Data>();
+			for (Object hit : query("aiserver").exact("aiservertype", inServerType).sort("ordering").search())
 			{
-				serverinfo = getCachedData("aiserver", "localhost");
+				Data server = (Data) hit;
+				if (!Boolean.parseBoolean(server.get("disabled")))
+				{
+					servers.add(server);
+				}
+			}
+			if (servers.isEmpty())
+			{
+				Data serverinfo = getCachedData("aiserver", "localhost");
 				if (serverinfo == null)
 				{
 					throw new OpenEditException("Using localhost for aifunction " + inServerType);
 				}
+				servers.add(serverinfo);
 			}
-			String llm = serverinfo.get("connectionbean");
-			connection = (LlmConnection) getModuleManager().getBean(getCatalogId(), llm, false);
-
-			connection.setAiServerData(serverinfo);
+			FailoverLlmConnection failover = new FailoverLlmConnection(inServerType);
+			for (Data serverinfo : servers)
+			{
+				String llm = serverinfo.get("connectionbean");
+				LlmConnection real = null;
+				try
+				{
+					real = (LlmConnection) getModuleManager().getBean(getCatalogId(), llm, false);
+					real.setAiServerData(serverinfo);
+					log.info(inServerType + " picked llmconnection type:" + llm + " selected AI server URL: " + serverinfo.get("serverroot"));
+				}
+				catch (Exception ex)
+				{
+					// Warned once here because the list is cached; the record keeps its place but is never called
+					log.warn("llm " + inServerType + ": skipping " + serverinfo.getId() + ", bean " + llm + " failed to load: " + ex.getMessage());
+				}
+				failover.add(serverinfo, real);
+			}
+			connection = failover;
 			getCacheManager().put(cacheName, inServerType, connection);
-			log.info(inServerType + " picked llmconnection type:" + llm + " selected AI server URL: " + serverinfo.get("serverroot"));
 		}
 
 		return connection;

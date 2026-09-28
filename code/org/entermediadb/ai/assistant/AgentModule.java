@@ -150,14 +150,6 @@ public class AgentModule extends BaseMediaModule
 		searcher.saveData(agentContext, inReq.getUser());
 	}
 
-	public void loadTutorials(WebPageRequest inReq) throws Exception
-	{
-		Searcher tutorialsearcher = getMediaArchive(inReq).getSearcher("aitutorial");
-		HitTracker hits = tutorialsearcher.query().exact("featured", true).search();
-
-		inReq.putPageValue("tutorials", hits);
-	}
-
 	public void sendWelcomeIfNeeded(WebPageRequest inReq) throws Exception
 	{
 		MediaArchive mediaArchive = getMediaArchive(inReq);
@@ -243,6 +235,7 @@ public class AgentModule extends BaseMediaModule
 		}
 
 		Collection<String> params = inReq.getParameterMap().keySet();
+		org.json.simple.JSONObject requestcontext = new org.json.simple.JSONObject();
 		// boolean context
 		for (Iterator iterator = params.iterator(); iterator.hasNext();)
 		{
@@ -254,13 +247,16 @@ public class AgentModule extends BaseMediaModule
 				{
 					String keyName = key.substring("context_".length());
 					chatAgentContext.putContextValue(keyName, value);
+					requestcontext.put(keyName, value);
 				}
 			}
 		}
 
 		mediaArchive.saveData("agentcontext", chatAgentContext);
-		// assistantManager.sendSystemMessage(chatAgentContext, inReq.getUserName(), functionname);
-		assistantManager.sendSystemMessage(chatAgentContext, inReq.getUserName(), null, functionname);
+		// TestU local patch: the request's context_* ride on its system message. loadChatContext
+		// replays every message's agentcontextvalues oldest first, so without this the previous
+		// answer's persisted selectedoption/confidence overwrote this request's values.
+		assistantManager.sendSystemMessage(chatAgentContext, inReq.getUserName(), null, functionname, requestcontext.isEmpty() ? null : requestcontext.toJSONString());
 	}
 
 	public AgentContext loadAgentContext(WebPageRequest inReq) throws Exception
@@ -276,7 +272,7 @@ public class AgentModule extends BaseMediaModule
 
 		String applicationid = inReq.findValue("applicationid");
 
-		if( inReq.getPageValue("agentcontext") != null)
+		if (inReq.getPageValue("agentcontext") != null)
 		{
 			return (AgentContext) inReq.getPageValue("agentcontext");
 		}

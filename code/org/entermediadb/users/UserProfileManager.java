@@ -228,6 +228,15 @@ public class UserProfileManager
 		if (user != null && userprofile != null)
 		{
 			String role = userprofile.get("settingsrole");
+			String legacy = userprofile.get("settingsgroup");
+			if (role == null && legacy != null && !"guest".equals(legacy))
+			{
+				// settingsgroup was renamed settingsrole (2026-09-17): carry it over instead of
+				// resetting, which would replace the whole saved profile with a blank one
+				userprofile.setProperty("settingsrole", legacy);
+				saveUserProfile(userprofile);
+				role = legacy;
+			}
 			if (role == null || "guest".equals(role))
 			{
 				log.info("Reset to defaultrole");

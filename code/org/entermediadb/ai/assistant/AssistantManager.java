@@ -136,7 +136,13 @@ public class AssistantManager extends BaseAiManager implements SkillStatusListen
 					Runnable runnable = new Runnable() { // Let the user broadcast finish
 						public void run()
 						{
-							respondToChannel(inLog, channel, mostrecent);
+							// Replies run in parallel across channels; one channel stays in order
+							// (its ChatMessageContext is cached and shared).
+							// ponytail: interned-string lock, a lock map if channel ids stop being short.
+							synchronized (("chatchannel:" + channel.getId()).intern())
+							{
+								respondToChannel(inLog, channel, mostrecent);
+							}
 						}
 					};
 					archive.getExecutorManager().execLater(runnable, 0);
@@ -744,7 +750,7 @@ public class AssistantManager extends BaseAiManager implements SkillStatusListen
 		return manager;
 	}
 
-	public void sendSystemMessage(ChatMessageContext inContext, String inUser, String message, String functionname)
+	public void sendSystemMessage(ChatMessageContext inContext, String inUser, String message, String functionname, String inAgentContextValues)
 	{
 		MediaArchive archive = getMediaArchive();
 
@@ -758,9 +764,16 @@ public class AssistantManager extends BaseAiManager implements SkillStatusListen
 		chat.setValue("chatmessagestatus", "received");
 		chat.setValue("channel", inContext.getChannel().getId());
 		chat.setValue("message", message);
+		chat.setValue("agentcontextvalues", inAgentContextValues);
 
 		archive.saveData("chatterbox", chat);
 		// inReq.putPageValue("chat", chat);
+
+		// monitorChannels only reads channels refreshed in the last hour; an app that keeps
+		// its channel id (TestU) had its questions left "received" forever after an idle hour.
+		Data channel = inContext.getChannel();
+		channel.setValue("refreshdate", new Date());
+		archive.saveData("channel", channel);
 
 		// Fire monitor
 		archive.fireSharedMediaEvent("llm/monitorchats");
@@ -786,7 +799,7 @@ public class AssistantManager extends BaseAiManager implements SkillStatusListen
 				String key = server.get("serverapikey");
 				if (key != null)
 				{
-					connection.addSharedHeader("Authorization", "Bearer " + server);
+					connection.addSharedHeader("Authorization", "Bearer " + key);
 				}
 				long start = System.currentTimeMillis();
 				try
@@ -807,7 +820,7 @@ public class AssistantManager extends BaseAiManager implements SkillStatusListen
 				catch (Exception ex)
 				{
 					inLog.info(address + " had error " + ex);
-					speeds.put(serverroot, Integer.MAX_VALUE); // Push back
+					speeds.put(serverroot, -1);
 					// Ignore
 				}
 			}
@@ -819,7 +832,7 @@ public class AssistantManager extends BaseAiManager implements SkillStatusListen
 			{
 				String serverroot = server.get("serverroot");
 				Integer speed = speeds.get(serverroot);
-				server.setValue("ordering", speed);
+				server.setValue("healthms", speed);
 				tosave.add(server);
 			}
 			getMediaArchive().getSearcher("aiserver").saveAllData(tosave, null);
@@ -1124,13 +1137,22 @@ public class AssistantManager extends BaseAiManager implements SkillStatusListen
 				}
 			}
 
-			//Make functioname be the last functio
-			//and next be the next
 			agentmessage.setValue("functionname", inAutomationStep.getEnabledId());
 			agentmessage.setValue("nextfunctionname", nextFunctionName);
 			agentmessage.setValue("chatmessagestatus", "completed");
 
-			agentmessage.setValue("agentcontextvalues", inContext.toJSONString());
+			// Prompt scratch (lesson text, excerpts, the built prompt) is per reply: stored, it
+			// bloated every row and loadChatContext replayed it into the next reply's context.
+			String contextjson = inContext.toJSONString();
+			if (inContext instanceof org.entermediadb.ai.llm.BaseAgentContext)
+			{
+				JSONObject slim = ((org.entermediadb.ai.llm.BaseAgentContext) inContext).toJSON();
+				slim.remove("chathistory");
+				slim.remove("referenceexcerpts");
+				slim.remove("learnerprompt");
+				contextjson = slim.toJSONString();
+			}
+			agentmessage.setValue("agentcontextvalues", contextjson);
 
 			getMediaArchive().saveData("chatterbox", agentmessage);
 
@@ -1140,6 +1162,13 @@ public class AssistantManager extends BaseAiManager implements SkillStatusListen
 			functionMessageUpdate.put("user", "agent");
 			functionMessageUpdate.put("channel", agentmessage.get("channel"));
 			functionMessageUpdate.put("messageid", agentmessage.getId());
+			// TestU: the app's context_requestid comes back so a reply finds its question; matching
+			// by arrival order shifted every later reply by one after a single lost broadcast.
+			Object requestid = inContext.getContextValue("requestid");
+			if (requestid != null)
+			{
+				functionMessageUpdate.put("replytoid", String.valueOf(requestid));
+			}
 			if (messageplain == null)
 			{
 				messageplain = "New message";

@@ -17,12 +17,15 @@ import org.openedit.Data;
 import org.openedit.MultiValued;
 import org.openedit.OpenEditException;
 import org.openedit.WebPageRequest;
+import org.openedit.data.QueryBuilder;
 import org.openedit.data.Searcher;
 import org.openedit.util.DateStorageUtil;
 
 public class TopicManager extends BaseMediaModule
 {
 
+	// Bulk reads below use search() with 1000 hits a page: search(inReq) takes the user profile page size (tens), and
+	// walking ~2000 componentcontent / every tutoranswer row a page at a time cost one ES round trip per page (~4x slower topics.json locally).
 	public void getUserTopics(WebPageRequest inReq)
 	{
 		MediaArchive mediaArchive = getMediaArchive(inReq);
@@ -37,7 +40,7 @@ public class TopicManager extends BaseMediaModule
 		Set<String> completedQuestionIds = new HashSet<>();
 		if (userid != null)
 		{
-			Collection<Data> answers = mediaArchive.query("tutoranswer").exact("user", userid).search(inReq);
+			Collection<Data> answers = mediaArchive.query("tutoranswer").exact("user", userid).hitsPerPage(1000).search();
 			if (answers != null)
 			{
 				for (Data answer : answers)
@@ -77,7 +80,7 @@ public class TopicManager extends BaseMediaModule
 		Collection<MultiValued> allTutorials = null;
 		if (!topicIds.isEmpty())
 		{
-			allTutorials = mediaArchive.query("entitytutorial").orgroup("entitytopic", topicIds).search(inReq);
+			allTutorials = mediaArchive.query("entitytutorial").orgroup("entitytopic", topicIds).hitsPerPage(1000).search();
 		}
 		if (allTutorials == null)
 		{
@@ -102,7 +105,7 @@ public class TopicManager extends BaseMediaModule
 		Collection<MultiValued> allSections = null;
 		if (!tutorialIds.isEmpty())
 		{
-			allSections = mediaArchive.query("componentsection").orgroup("playbackentityid", tutorialIds).exact("playbackentitymoduleid", "entitytutorial").sort("ordering").search(inReq);
+			allSections = mediaArchive.query("componentsection").orgroup("playbackentityid", tutorialIds).exact("playbackentitymoduleid", "entitytutorial").sort("ordering").hitsPerPage(1000).search();
 		}
 		if (allSections == null)
 		{
@@ -127,7 +130,7 @@ public class TopicManager extends BaseMediaModule
 		Collection<MultiValued> allComponents = null;
 		if (!sectionIds.isEmpty())
 		{
-			allComponents = mediaArchive.query("componentcontent").orgroup("componentsectionid", sectionIds).search(inReq);
+			allComponents = mediaArchive.query("componentcontent").orgroup("componentsectionid", sectionIds).hitsPerPage(1000).search();
 		}
 		if (allComponents == null)
 		{
@@ -147,7 +150,7 @@ public class TopicManager extends BaseMediaModule
 		Map<String, MultiValued> progressByTutorialId = new HashMap<>();
 		if (userid != null && !tutorialIds.isEmpty())
 		{
-			Collection<MultiValued> allProgress = mediaArchive.query("tutorialprogress").orgroup("entitytutorial", tutorialIds).exact("user", userid).search(inReq);
+			Collection<MultiValued> allProgress = mediaArchive.query("tutorialprogress").orgroup("entitytutorial", tutorialIds).exact("user", userid).hitsPerPage(1000).search();
 			if (allProgress != null)
 			{
 				for (MultiValued p : allProgress)
@@ -296,7 +299,7 @@ public class TopicManager extends BaseMediaModule
 		Set<String> completedQuestionIds = new HashSet<>();
 		if (userid != null)
 		{
-			Collection<Data> answers = mediaArchive.query("tutoranswer").exact("user", userid).search(inReq);
+			Collection<Data> answers = mediaArchive.query("tutoranswer").exact("user", userid).hitsPerPage(1000).search();
 			if (answers != null)
 			{
 				for (Data a : answers)
@@ -336,7 +339,7 @@ public class TopicManager extends BaseMediaModule
 		Collection<MultiValued> allSections = null;
 		if (!tutorialIds.isEmpty())
 		{
-			allSections = mediaArchive.query("componentsection").orgroup("playbackentityid", tutorialIds).exact("playbackentitymoduleid", "entitytutorial").sort("ordering").search(inReq);
+			allSections = mediaArchive.query("componentsection").orgroup("playbackentityid", tutorialIds).exact("playbackentitymoduleid", "entitytutorial").sort("ordering").hitsPerPage(1000).search();
 		}
 		if (allSections == null)
 		{
@@ -361,7 +364,7 @@ public class TopicManager extends BaseMediaModule
 		Collection<MultiValued> allComponents = null;
 		if (!sectionIds.isEmpty())
 		{
-			allComponents = mediaArchive.query("componentcontent").orgroup("componentsectionid", sectionIds).search(inReq);
+			allComponents = mediaArchive.query("componentcontent").orgroup("componentsectionid", sectionIds).hitsPerPage(1000).search();
 		}
 		if (allComponents == null)
 		{
@@ -381,7 +384,7 @@ public class TopicManager extends BaseMediaModule
 		Map<String, MultiValued> progressByTutorialId = new HashMap<>();
 		if (userid != null && !tutorialIds.isEmpty())
 		{
-			Collection<MultiValued> allProgress = mediaArchive.query("tutorialprogress").orgroup("entitytutorial", tutorialIds).exact("user", userid).search(inReq);
+			Collection<MultiValued> allProgress = mediaArchive.query("tutorialprogress").orgroup("entitytutorial", tutorialIds).exact("user", userid).hitsPerPage(1000).search();
 			if (allProgress != null)
 			{
 				for (MultiValued p : allProgress)
@@ -487,14 +490,14 @@ public class TopicManager extends BaseMediaModule
 		String channelid = inReq.getRequestParameter("channel");
 		if (channelid != null)
 		{
-			currentchannel = (MultiValued) mediaArchive.query("channel").exact("searchtype", "entitytutorial").id(channelid).exact("user", inReq.getUser().getId()).searchOne();
+			currentchannel = (MultiValued) mediaArchive.query("channel").exact("searchtype", "entitytutorial").id(channelid).exact("user", inReq.getUser().getId()).not("testuchat", "true").searchOne();
 			if (currentchannel == null)
 			{
 				throw new OpenEditException("Channel not found: " + channelid + " for user " + inReq.getUser().getId());
 			}
 			if ("finished".equals(currentchannel.get("channelstatus")))
 			{
-				activechannel = (MultiValued) mediaArchive.query("channel").exact("searchtype", "entitytutorial").exact("dataid", dataid).not("channelstatus", "finished").sort("dateDown").searchOne();
+				activechannel = (MultiValued) mediaArchive.query("channel").exact("searchtype", "entitytutorial").exact("dataid", dataid).exact("user", inReq.getUser().getId()).not("testuchat", "true").not("channelstatus", "finished").sort("dateDown").searchOne();
 			}
 			else
 			{
@@ -507,6 +510,7 @@ public class TopicManager extends BaseMediaModule
 				.exact("searchtype", "entitytutorial")
 				.exact("dataid", dataid)
 				.exact("user", inReq.getUser())
+				.not("testuchat", "true")
 				.not("channelstatus", "finished")
 				.sort("dateDown")
 				.searchOne();
@@ -523,6 +527,7 @@ public class TopicManager extends BaseMediaModule
 			.exact("searchtype", "entitytutorial")
 			.exact("dataid", dataid)
 			.exact("user", inReq.getUser().getId())
+			.not("testuchat", "true")
 			.exact("channelstatus", "finished")
 			.sort("dateDown")
 			.search();
@@ -626,7 +631,18 @@ public class TopicManager extends BaseMediaModule
 	public void resetTutorial(WebPageRequest inReq)
 	{
 		Searcher channelSearcher = getMediaArchive(inReq).getSearcher("channel");
-		Collection<Data> channels = channelSearcher.query().exact("channeltype", "agenttutorchat").search();
+		String userid = inReq.getUser().getId();
+		String dataid = inReq.getRequestParameter("dataid");
+		QueryBuilder channelQuery = channelSearcher.query().exact("channeltype", "agenttutorchat").exact("user", userid);
+		if (dataid != null)
+		{
+			channelQuery.exact("dataid", dataid);
+		}
+		Collection<Data> channels = channelQuery.search();
+		if (channels.isEmpty())
+		{
+			return; // empty orgroup below must never widen to all rows
+		}
 		Collection<String> channelIds = channels.stream().map(d -> d.getId()).collect(Collectors.toList());
 		Collection<String> tutorialIds = channels.stream().map(d -> d.get("dataid")).collect(Collectors.toList());
 
@@ -637,15 +653,15 @@ public class TopicManager extends BaseMediaModule
 		chatterboxSearcher.deleteAll(chatterboxMessages, null);
 
 		Searcher tutoranswerSearcher = getMediaArchive(inReq).getSearcher("tutoranswer");
-		Collection<Data> tutoranswers = tutoranswerSearcher.query().orgroup("channel", channelIds).search();
+		Collection<Data> tutoranswers = tutoranswerSearcher.query().orgroup("channel", channelIds).exact("user", userid).search();
 		tutoranswerSearcher.deleteAll(tutoranswers, null);
 
-		Searcher tutorprogressSearcher = getMediaArchive(inReq).getSearcher("tutorprogress");
-		Collection<Data> tutorprogresses = tutorprogressSearcher.query().orgroup("entitytutorial", tutorialIds).search();
+		Searcher tutorprogressSearcher = getMediaArchive(inReq).getSearcher("tutorialprogress");
+		Collection<Data> tutorprogresses = tutorprogressSearcher.query().orgroup("entitytutorial", tutorialIds).exact("user", userid).search();
 		tutorprogressSearcher.deleteAll(tutorprogresses, null);
 
 		Searcher dailySearcher = getMediaArchive(inReq).getSearcher("tutordailychallenge");
-		Collection<Data> dailychallenges = dailySearcher.query().orgroup("channel", channelIds).search();
+		Collection<Data> dailychallenges = dailySearcher.query().orgroup("channel", channelIds).exact("user", userid).search();
 		dailySearcher.deleteAll(dailychallenges, null);
 
 	}
