@@ -3542,7 +3542,7 @@ td .emgridcell a i.module-icon {
 }
 .languagesfield {
 	flex: 1;
-	padding: 10px 10px 8px;
+	padding: 1rem;
 	background-color: rgba(184, 199, 217, 0.3);
 	border: 1px solid rgba(184, 199, 217, 0.4);
 	border-radius: var(--btn-radius);

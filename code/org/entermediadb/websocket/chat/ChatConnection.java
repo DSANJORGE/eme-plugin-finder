@@ -381,9 +381,7 @@ public class ChatConnection extends Endpoint implements MessageHandler.Partial<S
 			if (param_.length == 2)
 			{
 				String name = param_[0];
-				// TestU: undecoded, userid=diego%40testu.co never matched the channel owner, so
-				// replies were dropped until the first keepalive (20 s) reset the user id.
-				String value = java.net.URLDecoder.decode(param_[1], java.nio.charset.StandardCharsets.UTF_8);
+				String value = param_[1];
 				map.put(name, value);
 			}
 

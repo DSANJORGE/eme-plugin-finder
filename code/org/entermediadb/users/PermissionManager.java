@@ -154,7 +154,7 @@ public class PermissionManager implements CatalogEnabled
 			}
 			else
 			{
-				allpermissions.addAll(existingassignedentity);
+				allpermissions.addAll(needit);
 			}
 
 			if (existingassignedentity.containsAll(needit)) // contains everything

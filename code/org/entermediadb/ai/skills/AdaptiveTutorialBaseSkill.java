@@ -58,7 +58,7 @@ public class AdaptiveTutorialBaseSkill extends BaseSkill
 
 		for (MultiValued message : messages)
 		{
-			Map<String, Object> agentContext = getAgentContext(message);
+			Map<String, Object> agentContext = getAgentContext(message);	
 
 			if (agentContext == null || !sectionId.equals(agentContext.get("sectionid")))
 			{
@@ -79,40 +79,12 @@ public class AdaptiveTutorialBaseSkill extends BaseSkill
 		JSONArray chatHistory = new JSONArray();
 
 		Collection<MultiValued> components = getMediaArchive().query("componentcontent").exact("componentsectionid", sectionId).sort("ordering").search();
-		// TestU local patch (2026-09-04): headings, lesson paragraphs and the
-		// main explanation of each question go to the model; the mcq text, the
-		// per-option distractor lines, exercise, source and images are skipped.
-		// A section of the 2026 bank has 20-33 question blocks (~11k tokens) and
-		// llamat spent ~4 s just reading them. The question in play travels in
-		// the learner prompt with its own rationale.
-		// ponytail: by position, not by contentrole (the loaded roles are noisy).
-		int afterMcq = -1; // -1 outside a question block, else paragraphs seen since the mcq
 		for (MultiValued component : components)
 		{
-			String type = component.get("componenttype");
-			if ("heading".equals(type))
-			{
-				afterMcq = -1;
-			}
-			else if ("mcq".equals(type) || "asset".equals(type))
-			{
-				afterMcq = "mcq".equals(type) ? 0 : afterMcq;
-				continue;
-			}
-			else if (afterMcq >= 0 && afterMcq++ > 0)
-			{
-				continue;
-			}
 			String content = component.get("content");
 			if (content == null || content.length() == 0)
 			{
 				continue;
-			}
-			if (afterMcq > 0 && content.length() > 300)
-			{
-				// Explanation of a question: keep its opening sentences only.
-				int cut = content.lastIndexOf(". ", 300);
-				content = content.substring(0, cut > 120 ? cut + 1 : content.lastIndexOf(' ', 300)) + (cut > 120 ? "" : "…");
 			}
 			JSONObject historyItem = new JSONObject();
 			historyItem.put("role", "assistant");
@@ -133,12 +105,12 @@ public class AdaptiveTutorialBaseSkill extends BaseSkill
 	{
 		Object agentContextObj = message.getValue("agentcontextvalues");
 		Map<String, Object> agentContext = null;
-		if (agentContextObj instanceof String)
+		if( agentContextObj instanceof String)
 		{
 			String agentContextStr = (String) agentContextObj;
 			agentContext = new JSONParser().parseMap(agentContextStr);
-			message.setValue("agentcontextvalues", agentContext); // For next time
-		}
+			message.setValue("agentcontextvalues",agentContext); //For next time
+		}	
 		else
 		{
 			agentContext = (Map<String, Object>) agentContextObj;

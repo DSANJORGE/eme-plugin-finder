@@ -56,6 +56,19 @@ public class AgentJob extends BaseData implements CatalogEnabled
 		steps = inSteps;
 	}
 
+	/**
+	 * The opencode form a step is waiting on ({id, title, fields:[{key, type, title, ...}]}), or null.
+	 */
+	public Map getPendingForm(MultiValued inStep)
+	{
+		String json = inStep.get("pendingform");
+		if (json == null || json.isEmpty())
+		{
+			return null;
+		}
+		return new JSONParser().parseMap(json);
+	}
+
 	public String findLastResponse()
 	{
 		steps = null; //Pull from database

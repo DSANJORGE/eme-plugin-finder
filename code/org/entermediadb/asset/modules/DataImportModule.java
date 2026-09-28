@@ -258,6 +258,10 @@ public class DataImportModule extends DataEditModule
 
 		Page list = getPageManager().getPage("/WEB-INF/data/" + catalogid + "/lists/" + searchtype + ".xml");
 		getPageManager().removePage(list);
-
+		
+		inReq.setRequestParameter("searchtype", "");
+		inReq.putPageValue("deletedtable", true);
+		inReq.getUserProfile().setValue("databasecurrentsearch", "");
+		inReq.getUserProfile().save();
 	}
 }

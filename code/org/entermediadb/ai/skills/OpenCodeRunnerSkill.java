@@ -1,54 +1,61 @@
 package org.entermediadb.ai.skills;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.entermediadb.ai.AgentContext;
 import org.entermediadb.ai.BaseSkill;
+import org.entermediadb.ai.agentjobs.AgentJobOrchestrator;
 import org.entermediadb.ai.llm.BasicLlmResponse;
 import org.entermediadb.ai.llm.LlmResponse;
+import org.entermediadb.mcp.client.OpenCodeClient;
+import org.entermediadb.mcp.client.SessionStatus;
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
+import org.openedit.Data;
 import org.openedit.MultiValued;
 import org.openedit.OpenEditException;
 import org.openedit.repository.ContentItem;
-import org.openedit.util.DataOutputSaver;
-import org.openedit.util.Exec;
-import org.openedit.util.ExecResult;
 
 /**
- * OpenCodeRunnerSkill - Runs the opencode CLI in a working directory passed in the agent context
- * and appends its output to a temporary file, then returns the file contents as the LLM response
- * message.
+ * OpenCodeRunnerSkill - Starts (or resumes) an opencode server session for the current
+ * agentjobstep and blocks until the session goes idle, hits an error, or opencode asks a
+ * permission question that needs a human answer.
  *
- * Usage in AgentContext: - Set "workingpath" (optional) - Directory the opencode command runs in;
- * defaults to one level above getMediaArchive().getRootDirectory() - Set "outputfile" (optional) -
- * Path of the temp file to append output to; if not provided, defaults to a unique log file under
- * workingpath/tomcat/logs/ - Set "yolo" (optional) - If true, passes --yolo to opencode so it runs
- * without permission prompts
+ * Usage in AgentContext: - "userrequest" (required, set by OpenCodeUserRequestSkill in chat) - The prompt sent to opencode - "workingpath"
+ * (optional) - Directory the opencode session runs in; defaults to one level above
+ * getMediaArchive().getRootDirectory() - "agentjobstep" - The MultiValued step record; its id keys
+ * the OpenCodeClient session map so re-running this skill resumes the same opencode session
+ * instead of starting a new one.
  *
- * Results stored in context: - "commandoutput" - Full contents of the output file after running -
- * "outputfilepath" - Path of the temp file that holds the appended output
+ * Results: - On completion, "commandoutput" holds the assistant's final reply text and it's also
+ * set as inContext.getLastResponse(). - If opencode raises a permission request (a tool call
+ * awaiting approval) that isn't resolved within the wait budget, the agentjobstep is left with
+ * status "question" or "securityprompt" plus "pendingquestion"/"pendingpermissionid", and this method returns
+ * without marking the step complete. Answering that question (via
+ * OpenCodeClient#replyToPermission) and re-running this step resumes the same session.
  */
 public class OpenCodeRunnerSkill extends BaseSkill
 {
 	private static final Log log = LogFactory.getLog(OpenCodeRunnerSkill.class);
 
-	protected static final String COMMAND = "opencode";
+	// How long a single poll blocks waiting on new /event activity before we check the overall budget.
+	protected static final long POLL_TIMEOUT_MS = 30_000L;
 
-	protected Exec fieldExec;
+	// Overall wall-clock budget for one invocation before giving up as timed out.
+	protected static final long MAX_WAIT_MS = 20 * 60 * 1000L;
 
 	@Override
 	public void process(AgentContext inContext)
 	{
-
+		AgentJobOrchestrator orchestrator = (AgentJobOrchestrator) getMediaArchive().getBean("agentJobOrchestrator");
 		String query = (String) inContext.getContextValue("userrequest");
-		if(  query == null || query.trim().isEmpty())
+		if (query == null || query.trim().isEmpty())
 		{
-			throw new OpenEditException("OpenCodeRunnerSkill: No user request provided");
+			// In chat, OpenCodeUserRequestSkill runs first and sets userrequest and agentjobstep
+			log.info("OpenCodeRunnerSkill: no userrequest, waiting for input");
+			return;
 		}
 
 		String workingpath = (String) inContext.getContextValue("workingpath");
@@ -56,137 +63,162 @@ public class OpenCodeRunnerSkill extends BaseSkill
 		{
 			ContentItem root = getMediaArchive().getPageManager().getRepository().get("/");
 
-			workingpath = new File( root.getAbsolutePath() ).getParentFile().getAbsolutePath();
+			workingpath = new File(root.getAbsolutePath()).getParentFile().getAbsolutePath();
 
 			log.info("OpenCodeRunnerSkill: No workingpath provided, defaulting to " + workingpath);
 		}
 
-		//opencode run --model "local-llama//root/unsloth/Qwen3.8-27B-GGUF/Qwen3.8-27B-UD-Q4_K_XL.gguf" "What is 2 + 3"
-		log.info("OpenCodeRunnerSkill running command: " + COMMAND + " in " + workingpath);
+		MultiValued agentjobstep = (MultiValued) inContext.getContextValue("agentjobstep");
 
-		List<String> args = new ArrayList<String>();
-		// Add any additional arguments to the command here if needed
-
-		args.add("--dir");
-		args.add(workingpath);
-		//args.add("--config");
-		//args.add(new File(workingpath, "opencode.json").getAbsolutePath());
-		args.add("--model");
-		args.add("local-llama//root/unsloth/Qwen3.8-27B-GGUF/Qwen3.8-27B-UD-Q4_K_XL.gguf");
-
-		String yolo = (String) inContext.getContextValue("yolo");
-		if (yolo == null || Boolean.parseBoolean(yolo))
-		{
-			args.add("--yolo");
-		}
-
-		args.add("run");
-		args.add("--format");
-		args.add("json");
-		args.add(query);
-
+		SessionStatus status;
+		OpenCodeClient client;
 		try
 		{
-
-			MultiValued agentjobstep = (MultiValued) inContext.getContextValue("agentjobstep");
-			DataOutputSaver dataOutputSaver = new DataOutputSaver(agentjobstep, "lastresponse");
-			dataOutputSaver.setCatalogId(getCatalogId());
-			dataOutputSaver.setModuleManager(getModuleManager());
-
-			int minutes = 1000 * 60 * 30; //60 second x 20 = 20 minutes
-			ExecResult execResult =  getExec().runExec(COMMAND, args, true, new File(workingpath), minutes,
-				(String lineX) -> {
-					dataOutputSaver.handleLog("INFO", lineX, null);
-				});
-			dataOutputSaver.flush(); //Saves log to DB
-
-			if( execResult.getReturnValue() == 0)
+			client = orchestrator.getOpenCodeClient();
+			client.connectToServer(); //start listening
+			status = client.loadStatus(agentjobstep.getId());
+			if (status == null)
 			{
-				log.info("OpenCodeRunnerSkill command executed successfully");
-			}
-			int exitcode = execResult.getReturnValue();
-			String stdout = execResult.getStandardOut();
-
-			log.info("OpenCodeRunnerSkill command exited with code: " + exitcode);
-			//String filecontents = stdout;
-			inContext.put("commandoutput", stdout);
-			
-			LlmResponse response = new BasicLlmResponse();
-			response.setMessage(stdout);
-			inContext.setLastResponse(response);  //Do I really need this?
-			if (exitcode != 0)
-			{
-				inContext.put("errormessage", "Command exited with code " + exitcode);
-				throw new OpenEditException("Command exited with code " + exitcode);
+				status = client.startSessionId(agentjobstep, workingpath, query);
 			}
 
+			long deadline = System.currentTimeMillis() + MAX_WAIT_MS;
+			do
+			{
+				status = client.advanceSession(inContext.getScriptLogger(),agentjobstep.getId(), POLL_TIMEOUT_MS);
+				// Save progress from time to time so the step shows what opencode has said so far.
+				saveMarkdown(client, status);
+			}
+			while (!status.isCompleted() && status.getPendingPermissionId() == null
+					&& System.currentTimeMillis() < deadline);
+		}
+		catch (InterruptedException e)
+		{
+			Thread.currentThread().interrupt();
+			throw new OpenEditException("OpenCodeRunnerSkill interrupted waiting on opencode session in " + workingpath, e);
 		}
 		catch (Exception e)
 		{
-			log.error("OpenCodeRunnerSkill error running command: " + COMMAND + " in " + workingpath, e);
-			if (e instanceof InterruptedException)
-			{
-				Thread.currentThread().interrupt();
-			}
-			throw new OpenEditException("OpenCodeRunnerSkill error running command: " + COMMAND + " in " + workingpath, e);
+			log.error("OpenCodeRunnerSkill error running opencode in " + workingpath, e);
+			throw new OpenEditException("OpenCodeRunnerSkill error running opencode in " + workingpath, e);
 		}
+
+		if (status.getPendingPermissionId() != null)
+		{
+			// opencode is blocked on a tool-call approval. Leave the step for a human to answer
+			// instead of marking it complete; AgentJobOrchestrator.runSkill only stamps "complete"
+			// when the step's status is still "running".
+			// "question" or "securityprompt" (see jobstatus.xml); the prompt text replaces the markdown.
+			String pendingStatus = status.getPendingStatus() != null ? status.getPendingStatus() : "securityprompt";
+			agentjobstep.setValue("status", pendingStatus);
+			agentjobstep.setValue("markdowncontent", status.getCurrentQuestion());
+			agentjobstep.setValue("pendingquestion", status.getCurrentQuestion());
+			agentjobstep.setValue("pendingpermissionid", status.getPendingPermissionId());
+			// The form's fields are rendered by agent_job_showjobplan.html via AgentJob.getPendingForm
+			JSONObject form = status.getPendingForm();
+			agentjobstep.setValue("pendingform", form == null ? null : form.toJSONString());
+			getMediaArchive().saveData("agentjobstep", agentjobstep);
+
+			LlmResponse response = new BasicLlmResponse();
+			response.setMessage(status.getCurrentQuestion());
+			inContext.setLastResponse(response);
+			return;
+		}
+
+		if (!status.isCompleted())
+		{
+			throw new OpenEditException("OpenCodeRunnerSkill: opencode session " + status.getSessionId()
+					+ " did not finish within " + MAX_WAIT_MS + "ms");
+		}
+
+		if (status.getError() != null)
+		{
+			throw new OpenEditException("OpenCodeRunnerSkill: opencode session " + status.getSessionId()
+					+ " failed: " + status.getError());
+		}
+
+		List<JSONObject> messages = client.getMessages(status.getSessionId());
+		String output = extractLastAssistantText(messages);
+		saveMarkdown(status, output);
+
+		inContext.put("commandoutput", output);
+		inContext.put("markdowncontent", output);
+		LlmResponse response = new BasicLlmResponse();
+		response.setMessage(output);
+		inContext.setLastResponse(response);
+
 		super.process(inContext);
 	}
 
-	protected void appendToFile(File inFile, String inContent) throws IOException
+	/**
+	 * Fetches the session's latest assistant text and saves it as the step's markdowncontent.
+	 * Best effort: a failure here must not break the running session.
+	 */
+	protected void saveMarkdown(OpenCodeClient inClient, SessionStatus inStatus)
 	{
-		if (inContent == null || inContent.isEmpty())
+		try
+		{
+			saveMarkdown(inStatus, extractLastAssistantText(inClient.getMessages(inStatus.getSessionId())));
+		}
+		catch (Exception e)
+		{
+			log.warn("OpenCodeRunnerSkill could not save progress for session " + inStatus.getSessionId(), e);
+		}
+	}
+
+	protected void saveMarkdown(SessionStatus inStatus, String inMarkdown)
+	{
+		if (inMarkdown == null || inMarkdown.isEmpty() || inStatus.getAgentJobStep() == null)
 		{
 			return;
 		}
-		FileOutputStream out = new FileOutputStream(inFile, true);
-		try
+		Data step = inStatus.getAgentJobStep();
+		if (inMarkdown.equals(step.get("markdowncontent")))
 		{
-			out.write(inContent.getBytes("UTF-8"));
+			return;
 		}
-		finally
-		{
-			out.close();
-		}
+		step.setValue("markdowncontent", inMarkdown);
+		getMediaArchive().saveData("agentjobstep", step);
 	}
 
-	protected String readFileContents(File inFile, boolean deleteAfterRead)
+	/**
+	 * Finds the most recent assistant message (per the opencode SDK's {info: {role}, parts:
+	 * [{type, text}]} message shape) and concatenates its text parts.
+	 */
+	protected String extractLastAssistantText(List<JSONObject> inMessages)
 	{
-		FileInputStream in = null;
-		try
+		if (inMessages == null)
 		{
-			in = new FileInputStream(inFile);
-			String contents = getExec().getFiller().readAllText(in);
-			if (contents == null)
+			return null;
+		}
+		for (int i = inMessages.size() - 1; i >= 0; i--)
+		{
+			JSONObject message = inMessages.get(i);
+			Object infoObj = message.get("info");
+			if (!(infoObj instanceof JSONObject) || !"assistant".equals(((JSONObject) infoObj).get("role")))
 			{
-				return "";
+				continue;
 			}
-			
-			return contents;
-		}
-		catch (IOException e)
-		{
-			log.error("OpenCodeRunnerSkill failed reading output file: " + inFile.getAbsolutePath(), e);
-			return "";
-		}
-		finally
-		{
-			getExec().getFiller().close(in);
-			if (deleteAfterRead && inFile.exists())
+			Object partsObj = message.get("parts");
+			if (!(partsObj instanceof JSONArray))
 			{
-				inFile.delete();
+				continue;
 			}
+			StringBuilder text = new StringBuilder();
+			for (Object partObj : (JSONArray) partsObj)
+			{
+				if (partObj instanceof JSONObject && "text".equals(((JSONObject) partObj).get("type")))
+				{
+					Object partText = ((JSONObject) partObj).get("text");
+					if (partText != null)
+					{
+						text.append(partText);
+					}
+				}
+			}
+			return text.toString();
 		}
-	}
-
-	public Exec getExec()
-	{
-		return fieldExec;
-	}
-
-	public void setExec(Exec inExec)
-	{
-		fieldExec = inExec;
+		return null;
 	}
 
 }

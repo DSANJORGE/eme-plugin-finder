@@ -440,14 +440,13 @@ public class AutoCompleteModule extends DataEditModule
 			{
 				todelete.add(term);
 			}
-			else
-				if (size != Integer.parseInt(hitcount))
-				{
-					term.setValue("hitcount", size);
-					term.setValue("timestamp", DateStorageUtil.getStorageUtil().formatForStorage(new Date()));
+			else if (size != Integer.parseInt(hitcount))
+			{
+				term.setValue("hitcount", size);
+				term.setValue("timestamp", DateStorageUtil.getStorageUtil().formatForStorage(new Date()));
 
-					tosave.add(term);
-				}
+				tosave.add(term);
+			}
 		}
 		searcher.deleteAll(todelete, null);
 		searcher.saveAllData(tosave, null);

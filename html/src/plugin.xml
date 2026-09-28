@@ -2753,6 +2753,24 @@
 		</property>
 	</bean>
 
+	<bean id="openCodeApproveSkill" class="org.entermediadb.ai.skills.OpenCodeApproveSkill" scope="prototype">
+		<property name="moduleManager">
+			<ref bean="moduleManager" />
+		</property>
+	</bean>
+
+	<bean id="openCodeAnswerSkill" class="org.entermediadb.ai.skills.OpenCodeAnswerSkill" scope="prototype">
+		<property name="moduleManager">
+			<ref bean="moduleManager" />
+		</property>
+	</bean>
+
+	<bean id="openCodeUserRequestSkill" class="org.entermediadb.ai.skills.OpenCodeUserRequestSkill" scope="prototype">
+		<property name="moduleManager">
+			<ref bean="moduleManager" />
+		</property>
+	</bean>
+
 	<bean id="openCodeRunnerSkill" class="org.entermediadb.ai.skills.OpenCodeRunnerSkill" scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
@@ -3329,6 +3347,12 @@
 	</bean>
 
 	<bean id="csvImporter" class="org.entermediadb.asset.importer.CsvImporter" lazy-init="default" scope="prototype">
+		<property name="moduleManager">
+			<ref bean="moduleManager" />
+		</property>
+	</bean>
+
+	<bean id="openCodeClient" class="org.entermediadb.mcp.client.OpenCodeClient" lazy-init="default" scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>

@@ -616,7 +616,7 @@ li.assettabnav {
 	display: inline-block;
 }
 .emdatafieldvalue .render-type-thumbnail img {
-	width: 140px;
+	max-width: 140px;
 }
 .asset-data-preview .emdatafieldvalue .badge-tags {
 	text-decoration: none;

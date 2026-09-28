@@ -5349,10 +5349,9 @@ table.greytxt {
 }
 
 #eml-tab-subnav li.current a {
-	color: var(--themed-tab-btn-active-text);
-	background: var(--light-bg);
 	height: calc(var(--nav-btn-height) + 1px);
 	line-height: var(--nav-btn-height);
+	background: var(--themed-tab-btn-active);
 }
 
 #eml-tab-subnav li.current a:hover {
@@ -6027,8 +6026,8 @@ li.add {
 }
 
 #advanced-dm-search {
-	padding: 5px 0;
 	width: 100%;
+	max-height: 500px;;
 }
 
 .btn.flat-left {
@@ -6198,10 +6197,6 @@ li.add {
 	min-height: 33px;
 }
 
-.settings-table .emdatafieldvalue {
-	padding: 0.25rem 1rem;
-	border-left: var(--1px-light);
-}
 
 table.table-striped tbody td.emdatafield {
 	width: 220px;

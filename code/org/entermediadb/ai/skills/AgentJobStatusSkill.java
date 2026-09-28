@@ -62,6 +62,9 @@ public class AgentJobStatusSkill extends BaseSkill
 			inContext.put("jobcountloops", 0);
 			throw new OpenEditException("Agent job status skill has looped too many times. Something is wrong.");
 		}
+
+
+		//Complete means the answer is listed within the final text than can be added to the context for the next step
 		String status = agentjob.get("status");
 
 		//status = "complete";

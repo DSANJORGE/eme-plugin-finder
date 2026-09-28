@@ -225,21 +225,6 @@
   <permission name="savesearch">
     <userprofile name="savesearch" value="true"/>
   </permission>
-  <permission name="exportcollection">
-    <userprofile name="exportcollection" value="true"/>
-  </permission>
-  <permission name="sharecollection">
-    <userprofile name="sharecollection" value="true"/>
-  </permission>
-  <permission name="addnewcollection">
-    <userprofile name="addnewcollection" value="true"/>
-  </permission>
-  <permission name="addnewlibrary">
-    <userprofile name="addnewlibrary" value="true"/>
-  </permission>
-  <permission name="viewcategorynavcollections">
-    <userprofile name="viewcategorynavcollections" value="true"/>
-  </permission>
   <permission name="viewmodulelist">
     <userprofile name="viewmodulelist" value="true"/>
   </permission>
@@ -257,23 +242,11 @@
   <permission name="develop">
     <userprofile name="viewdevelopertools" value="true"/>
   </permission>
-  <permission name="showlibrarypicker">
-    <userprofile name="showlibrarypicker" value="true"/>
-  </permission>
-  <permission name="showcollectionpicker">
-    <userprofile name="showcollectionpicker" value="true"/>
-  </permission>
-  <permission name="asseteditorlibraries">
-    <userprofile name="asseteditorlibraries" value="true"/>
-  </permission>
   <permission name="viewmetadatageneral">
     <or>
       <pagevalue name="caneditasset" equals="true"/>
       <userprofile name="viewmetadatageneral" value="true"/>
     </or>
-  </permission>
-  <permission name="assetannotate">
-    <userprofile name="assetannotate" value="true"/>
   </permission>
   <permission name="view">
     <userprofile name="view" value="true"/>
@@ -290,9 +263,6 @@
   <permission name="openeditdirectedit">
     <userprofile name="viewsettings" value="true"/>
   </permission>
-  <permission name="importworkspace">
-    <userprofile name="importworkspace" value="true"/>
-  </permission>
   <permission name="copycategory">
     <userprofile name="copycategory" value="true"/>
   </permission>
@@ -302,23 +272,11 @@
   <permission name="addtofavorites">
     <userprofile name="addtofavorites" value="true"/>
   </permission>
-  <permission name="searchjoins">
-    <userprofile name="searchjoins" value="true"/>
-  </permission>
-  <permission name="forcebasiccollections">
-    <userprofile name="forcebasiccollections" value="true"/>
-  </permission>
   <permission name="viewallassets">
     <userprofile name="viewallassets" value="true"/>
   </permission>
   <permission name="checkout">
     <userprofile name="checkout" value="true"/>
-  </permission>
-  <permission name="viewsavedcollections">
-    <userprofile name="viewsavedcollections" value="true"/>
-  </permission>
-  <permission name="viewfeaturedcollections">
-    <userprofile name="viewfeaturedcollections" value="true"/>
   </permission>
   <permission name="hidedeletedassets">
     <userprofile name="hidedeletedassets" value="true"/>

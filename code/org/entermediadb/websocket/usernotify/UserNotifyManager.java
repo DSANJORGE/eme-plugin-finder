@@ -49,22 +49,21 @@ public class UserNotifyManager
 	{
 		if (fieldUserAuthenticatedConnections == null)
 		{
-			// Written by websocket threads (login/close) and read by request threads (sentNotifications)
-			fieldUserAuthenticatedConnections = new java.util.concurrent.ConcurrentHashMap(); /// TODO: Remove unused ones on a loop
+			fieldUserAuthenticatedConnections = new HashMap(); /// TODO: Remove unused ones on a loop
 		}
 		return fieldUserAuthenticatedConnections;
 	}
 
 	protected void receiveLogin(UserNotifyConnection inConnection, JSONObject map)
 	{
-		String username = (String) map.get("userid");
-		String keyorpasswordentered = (String) map.get("entermediakey");
-		if (username == null || keyorpasswordentered == null)
+		String username = String.valueOf(map.get("userid"));
+		if (username == null)
 		{
 			return;
 		}
 		// setDesktop(getDesktop());
 		// authenticated
+		String keyorpasswordentered = (String) map.get("entermediakey");
 		User user = (User) getSearcherManager().getData("system", "user", username);
 		if (user == null) // TODO: Authenticate key (with expiration)
 		{
@@ -76,17 +75,7 @@ public class UserNotifyManager
 		}
 		String key = getStringEncrytion().getEnterMediaKey(user);
 
-		// Apps hold the OAuth access_token (a temp key with a timestamp); verify that one with its expiry
-		boolean tempkey = keyorpasswordentered.contains(StringEncryption.TIMESTAMP);
-		if (tempkey && !getStringEncrytion().verifyEnterMediaKey(user, user.getPassword(), keyorpasswordentered))
-		{
-			JSONObject authenticated = new JSONObject();
-			authenticated.put("command", "authenticatefail");
-			authenticated.put("reason", "Key did not match");
-			inConnection.sendMessage(authenticated);
-			return;
-		}
-		if (!tempkey && !key.equals(keyorpasswordentered))
+		if (!key.equals(keyorpasswordentered))
 		{
 			// check password
 			String clearpassword = getStringEncrytion().decryptIfNeeded(user.getPassword());
@@ -101,10 +90,15 @@ public class UserNotifyManager
 		}
 		inConnection.setUserId(username);
 
-		List connections = getUserAuthenticatedConnections().computeIfAbsent(username, k -> new ArrayList());
+		List connections = getUserAuthenticatedConnections().get(username);
+		if (connections == null)
+		{
+			connections = new ArrayList();
+		}
 		synchronized (connections)
 		{
 			connections.add(inConnection);
+			getUserAuthenticatedConnections().put(username, connections);
 		}
 
 		String connectionid = (String) map.get("connectionid");
@@ -162,24 +156,17 @@ public class UserNotifyManager
 
 	public void removeConnection(UserNotifyConnection inUserNotifyConnection)
 	{
-		if (inUserNotifyConnection.getUserId() == null)
-		{
-			return; // closed before login
-		}
 		Collection connections = getUserAuthenticatedConnections().get(inUserNotifyConnection.getUserId());
 		if (connections != null)
 		{
-			synchronized (connections)
-			{
-				connections.remove(inUserNotifyConnection);
-			}
+			connections.remove(inUserNotifyConnection);
 		}
 
 	}
 
 	public void sentNotifications(String inUserId, JSONObject inMessage)
 	{
-		List connections = inUserId == null ? null : getUserAuthenticatedConnections().get(inUserId);
+		List connections = getUserAuthenticatedConnections().get(inUserId);
 		if (connections != null)
 		{
 			synchronized (connections)
@@ -198,7 +185,7 @@ public class UserNotifyManager
 		}
 		else
 		{
-			log.debug("No authenticated connections to notify " + inUserId);
+			log.info("No authenticated connections to notify " + inUserId);
 		}
 	}
 
