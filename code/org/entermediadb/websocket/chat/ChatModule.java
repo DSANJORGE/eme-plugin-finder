@@ -683,7 +683,7 @@ public class ChatModule extends BaseMediaModule
 		{
 			channelname = user.getScreenName();;
 		}
-		else if( entity != null )
+		else if (entity != null)
 		{
 			channelname = entity.getName();
 		}
