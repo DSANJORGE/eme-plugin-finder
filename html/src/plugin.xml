@@ -46,7 +46,8 @@
 			<ref bean="stringEncryption" />
 		</property>
 	</bean>
-	<bean id="tempSecurityKeyAuthenticator" class="org.openedit.users.authenticate.TempSecurityKeyAuthenticator">
+	<bean id="tempSecurityKeyAuthenticator"
+		class="org.openedit.users.authenticate.TempSecurityKeyAuthenticator">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
@@ -192,7 +193,8 @@
 			<ref bean="emailErrorHandler" />
 		</property>
 	</bean>
-	<!-- <bean id="MediaEmailModule" class="org.entermediadb.asset.modules.MediaEmailModule"> <property name="postMail"> <ref bean="postMail" /> </property> </bean> -->
+	<!-- <bean id="MediaEmailModule" class="org.entermediadb.asset.modules.MediaEmailModule">
+	<property name="postMail"> <ref bean="postMail" /> </property> </bean> -->
 	<bean id="MountModule" class="org.entermediadb.asset.modules.MountModule">
 		<property name="webServer">
 			<ref bean="WebServer" />
@@ -271,8 +273,10 @@
 
 
 	<bean id="postMail" class="org.entermediadb.email.PostMail">
-		<!-- property name="smtpUsername"> <value>username</value> </property> <property name="smtpPassword"> <value></value> </property -->
-		<!-- <property name="smtpSecured"> <value>false</value> </property> <property name="smtpServer"> <value>localhost</value> </property> -->
+		<!-- property name="smtpUsername"> <value>username</value> </property> <property
+		name="smtpPassword"> <value></value> </property -->
+		<!-- <property name="smtpSecured"> <value>false</value> </property> <property name="smtpServer">
+		<value>localhost</value> </property> -->
 		<!-- property name="port"> <value>25</value> </property -->
 		<property name="pageManager">
 			<ref bean="pageManager" />
@@ -426,9 +430,6 @@
 	</bean>
 
 
-
-
-
 	<bean id="enterMedia" class="org.entermediadb.asset.EnterMedia" scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
@@ -505,7 +506,6 @@
 	</bean>
 
 
-
 	<bean id="zipGenerator" class="org.entermediadb.asset.generators.ZipGenerator">
 		<property name="pageManager">
 			<ref bean="pageManager" />
@@ -539,7 +539,8 @@
 			<ref bean="pageManager" />
 		</property>
 	</bean>
-	<bean id="exiftoolMetadataExtractor" class="org.entermediadb.asset.scanner.ExiftoolMetadataExtractor">
+	<bean id="exiftoolMetadataExtractor"
+		class="org.entermediadb.asset.scanner.ExiftoolMetadataExtractor">
 		<property name="exec">
 			<ref bean="exec" />
 		</property>
@@ -573,26 +574,31 @@
 		</property>
 	</bean>
 
-	<bean id="entityCreationManager" class="org.entermediadb.ai.assistant.EntityCreationManager" scope="prototype">
+	<bean id="entityCreationManager" class="org.entermediadb.ai.assistant.EntityCreationManager"
+		scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
 	</bean>
 
 
-	<bean id="originalDownloadGenerator" class="org.entermediadb.asset.generators.OriginalDocumentGenerator">
+	<bean id="originalDownloadGenerator"
+		class="org.entermediadb.asset.generators.OriginalDocumentGenerator">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
 	</bean>
 
-	<bean id="originalPreviewDownloadGenerator" class="org.entermediadb.asset.generators.OriginalPreviewDocumentGenerator">
+	<bean id="originalPreviewDownloadGenerator"
+		class="org.entermediadb.asset.generators.OriginalPreviewDocumentGenerator">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
 	</bean>
 
-	<!-- bean id="originalArchiveDocument" class="org.entermediadb.asset.generators.OriginalDocumentGenerator"> <property name="mediaArchiveManager"> <ref bean="mediaArchiveManager" /> </property> </bean -->
+	<!-- bean id="originalArchiveDocument"
+	class="org.entermediadb.asset.generators.OriginalDocumentGenerator"> <property
+	name="mediaArchiveManager"> <ref bean="mediaArchiveManager" /> </property> </bean -->
 	<bean id="convertArchiveDocument" class="org.entermediadb.asset.generators.ConvertGenerator">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
@@ -602,7 +608,8 @@
 		</property>
 	</bean>
 
-	<bean id="generatedMediaGenerator" class="org.entermediadb.asset.generators.GeneratedMediaGenerator">
+	<bean id="generatedMediaGenerator"
+		class="org.entermediadb.asset.generators.GeneratedMediaGenerator">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
@@ -610,9 +617,6 @@
 			<ref bean="pageManager" />
 		</property>
 	</bean>
-
-
-
 
 
 	<bean id="assetCompositeConverter" class="org.entermediadb.asset.scanner.CompositeConverter">
@@ -628,7 +632,6 @@
 			</list>
 		</property>
 	</bean>
-
 
 
 	<bean id="authenticator" class="org.openedit.users.authenticate.CompositeAuthenticator">
@@ -671,16 +674,32 @@
 	<bean id="youtubeImporter" class="org.entermediadb.asset.fetch.YoutubeImporter" />
 	<bean id="urlDownloadImporter" class="org.entermediadb.asset.fetch.UrlDownloadImporter" />
 
-	<!-- <bean id="luceneAssetRelatedKeywordSearcher" class="org.entermediadb.asset.search.RelatedKeywordLuceneSearcher" scope="prototype"> <property name="rootDirectory"> <ref bean="root" /> </property> <property name="indexRootFolder"><value>lucene</value></property> </bean> <bean id="compositeLuceneAutoCompleteSearcher" class="org.entermediadb.asset.autocomplete.AutoCompleteLuceneSearcher" scope="prototype"> 
-		<property name="rootDirectory"> <ref bean="root" /> </property> </bean> <bean id="luceneDynamicLogSearcher" class="org.entermediadb.logger.LuceneLogSearcher" scope="prototype"> <property name="rootDirectory"> <bean class="java.io.File"> <constructor-arg> <ref bean="root" /> </constructor-arg> <constructor-arg> <value>/WEB-INF/logs</value> </constructor-arg> </bean> </property> <property name="pageManager"> 
+	<!-- <bean id="luceneAssetRelatedKeywordSearcher"
+	class="org.entermediadb.asset.search.RelatedKeywordLuceneSearcher" scope="prototype"> <property
+	name="rootDirectory"> <ref bean="root" /> </property> <property
+	name="indexRootFolder"><value>lucene</value></property> </bean> <bean
+	id="compositeLuceneAutoCompleteSearcher"
+	class="org.entermediadb.asset.autocomplete.AutoCompleteLuceneSearcher" scope="prototype"> 
+		<property name="rootDirectory"> <ref bean="root" /> </property> </bean> <bean
+	id="luceneDynamicLogSearcher" class="org.entermediadb.logger.LuceneLogSearcher" scope="prototype">
+	<property name="rootDirectory"> <bean class="java.io.File"> <constructor-arg> <ref bean="root" />
+	</constructor-arg> <constructor-arg> <value>/WEB-INF/logs</value> </constructor-arg> </bean>
+	</property> <property name="pageManager"> 
 		<ref bean="pageManager" /> </property> </bean> -->
 	<bean id="LogSearchModule" class="org.entermediadb.logger.LogSearchModule">
 
 	</bean>
 
-	<!-- <bean id="luceneLogSearcher" class="org.entermediadb.logger.LuceneLogSearcher" scope="prototype"> <property name="rootDirectory"> <bean class="java.io.File"> <constructor-arg><ref bean="root"/></constructor-arg> <constructor-arg><value>/WEB-INF/logs</value></constructor-arg> </bean> </property> <property name="pageManager"><ref bean="pageManager"/></property> </bean> -->
+	<!-- <bean id="luceneLogSearcher" class="org.entermediadb.logger.LuceneLogSearcher"
+	scope="prototype"> <property name="rootDirectory"> <bean class="java.io.File">
+	<constructor-arg><ref bean="root"/></constructor-arg>
+	<constructor-arg><value>/WEB-INF/logs</value></constructor-arg> </bean> </property> <property
+	name="pageManager"><ref bean="pageManager"/></property> </bean> -->
 
-	<!-- <bean id="luceneAssetSearcher" class="org.entermediadb.asset.search.BaseAssetSearcher" scope="prototype"> <property name="dataConnector"> <ref bean="luceneAssetDataConnector" /> </property> <property name="eventManager"> <ref bean="eventManager" /> </property> <property name="pageManager"> <ref bean="pageManager" /> </property> </bean> -->
+	<!-- <bean id="luceneAssetSearcher" class="org.entermediadb.asset.search.BaseAssetSearcher"
+	scope="prototype"> <property name="dataConnector"> <ref bean="luceneAssetDataConnector" />
+	</property> <property name="eventManager"> <ref bean="eventManager" /> </property> <property
+	name="pageManager"> <ref bean="pageManager" /> </property> </bean> -->
 
 	<bean id="ConvertGenerator" class="org.entermediadb.asset.generators.ConvertGenerator">
 		<property name="pageManager">
@@ -691,7 +710,8 @@
 		</property>
 	</bean>
 
-	<bean id="defaultAssetSource" class="org.entermediadb.asset.sources.DefaultAssetSource" scope="prototype">
+	<bean id="defaultAssetSource" class="org.entermediadb.asset.sources.DefaultAssetSource"
+		scope="prototype">
 		<property name="webServer">
 			<ref bean="WebServer" />
 		</property>
@@ -716,7 +736,8 @@
 		</property>
 	</bean>
 
-	<bean id="googledriveAssetSource" class="org.entermediadb.asset.sources.GoogleDriveAssetSource" scope="prototype">
+	<bean id="googledriveAssetSource" class="org.entermediadb.asset.sources.GoogleDriveAssetSource"
+		scope="prototype">
 		<property name="webServer">
 			<ref bean="WebServer" />
 		</property>
@@ -729,7 +750,8 @@
 		</property>
 	</bean>
 
-	<bean id="zohoAssetSource" class="org.entermediadb.asset.sources.ZohoAssetSource" scope="prototype">
+	<bean id="zohoAssetSource" class="org.entermediadb.asset.sources.ZohoAssetSource"
+		scope="prototype">
 		<property name="webServer">
 			<ref bean="WebServer" />
 		</property>
@@ -743,8 +765,8 @@
 	</bean>
 
 
-
-	<bean id="entermediaAssetSource" class="org.entermediadb.asset.sources.EntermediaAssetSource" scope="prototype">
+	<bean id="entermediaAssetSource" class="org.entermediadb.asset.sources.EntermediaAssetSource"
+		scope="prototype">
 		<property name="webServer">
 			<ref bean="WebServer" />
 		</property>
@@ -752,10 +774,8 @@
 	</bean>
 
 
-
-
-
-	<bean id="mountAssetSource" class="org.entermediadb.asset.sources.OriginalsAssetSource" scope="prototype">
+	<bean id="mountAssetSource" class="org.entermediadb.asset.sources.OriginalsAssetSource"
+		scope="prototype">
 		<property name="webServer">
 			<ref bean="WebServer" />
 		</property>
@@ -766,7 +786,8 @@
 			<ref bean="folderMonitor" />
 		</property>
 	</bean>
-	<bean id="assetSourceManager" class="org.entermediadb.asset.sources.AssetSourceManager" scope="prototype">
+	<bean id="assetSourceManager" class="org.entermediadb.asset.sources.AssetSourceManager"
+		scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
@@ -787,7 +808,9 @@
 			<ref bean="pageManager" />
 		</property>
 	</bean>
-	<!-- <bean id="relatedKeywordSearcher" class="org.entermediadb.asset.search.RelatedKeywordLuceneSearcher" scope="prototype"> <property name="rootDirectory"> <ref bean="root" /> </property> </bean> -->
+	<!-- <bean id="relatedKeywordSearcher"
+	class="org.entermediadb.asset.search.RelatedKeywordLuceneSearcher" scope="prototype"> <property
+	name="rootDirectory"> <ref bean="root" /> </property> </bean> -->
 	<bean id="assetSecurityDataArchive" class="org.entermediadb.asset.search.AssetSecurityDataArchive">
 		<property name="searcherManager">
 			<ref bean="searcherManager" />
@@ -806,8 +829,6 @@
 		</property>
 
 	</bean>
-
-
 
 
 	<bean id="sourcepathcreator" class="org.entermediadb.asset.AssetSourcePathCreator">
@@ -864,8 +885,6 @@
 	</bean>
 
 
-
-
 	<bean id="LinkTree" class="org.entermediadb.links.LinkModule" init-method="init">
 		<property name="workFlow">
 			<ref bean="workFlowBean" />
@@ -907,7 +926,9 @@
 			<ref bean="root" />
 		</property>
 	</bean>
-	<!-- <bean id="luceneEmailSearcher" class="org.entermediadb.email.EmailSearcher" scope="prototype"> <property name="emailArchive"><ref bean="emailArchive"/></property> <property name="rootDirectory"><ref bean="root"/></property> </bean> -->
+	<!-- <bean id="luceneEmailSearcher" class="org.entermediadb.email.EmailSearcher"
+	scope="prototype"> <property name="emailArchive"><ref bean="emailArchive"/></property> <property
+	name="rootDirectory"><ref bean="root"/></property> </bean> -->
 	<bean id="fileSearcher" class="org.openedit.data.FileSearcher" scope="prototype">
 		<property name="pageManager">
 			<ref bean="pageManager" />
@@ -931,9 +952,23 @@
 	</bean>
 	<bean id="AssetStatsModule" class="org.entermediadb.asset.modules.AssetStatsModule">
 	</bean>
-	<!-- <bean id="luceneAssetAutoCompleteSearcher" class="org.entermediadb.asset.autocomplete.AutoCompleteLuceneSearcher" scope="prototype"> <property name="rootDirectory"> <ref bean="root" /> </property> </bean> -->
-	<!-- <bean id="localDataManager" class="org.entermediadb.asset.cluster.LocalDataManager"> <property name="root"><ref bean="root" /></property> <property name="searcherManager"><ref bean="searcherManager"/></property> <property name="pageManager"><ref bean="pageManager"/></property> <property name="userManager"><ref bean="userManager"/></property> </bean> <bean id="remoteDataManager" class="org.entermediadb.asset.cluster.RemoteDataManager"> <property name="root"><ref bean="root" /></property> <property name="searcherManager"><ref bean="searcherManager"/></property> <property name="pageManager"><ref bean="pageManager"/></property> <property name="userManager"><ref bean="userManager"/></property> <property name="xmlArchive"><ref bean="xmlArchive" /></property> </bean> <bean id="DistributedDataModule" class="org.entermediadb.asset.modules.DistributedDataModule"> <property name="localDataManager"><ref bean="localDataManager" /></property> </bean> -->
-	<!-- <bean id="dataFileSearcher" class="org.entermediadb.asset.cluster.DataFileSearcher"> <property name="pageManager"> <ref bean="pageManager" /> </property> <property name="rootDirectory"> <ref bean="root" /> </property> </bean> -->
+	<!-- <bean id="luceneAssetAutoCompleteSearcher"
+	class="org.entermediadb.asset.autocomplete.AutoCompleteLuceneSearcher" scope="prototype">
+	<property name="rootDirectory"> <ref bean="root" /> </property> </bean> -->
+	<!-- <bean id="localDataManager" class="org.entermediadb.asset.cluster.LocalDataManager">
+	<property name="root"><ref bean="root" /></property> <property name="searcherManager"><ref
+	bean="searcherManager"/></property> <property name="pageManager"><ref
+	bean="pageManager"/></property> <property name="userManager"><ref bean="userManager"/></property>
+	</bean> <bean id="remoteDataManager" class="org.entermediadb.asset.cluster.RemoteDataManager">
+	<property name="root"><ref bean="root" /></property> <property name="searcherManager"><ref
+	bean="searcherManager"/></property> <property name="pageManager"><ref
+	bean="pageManager"/></property> <property name="userManager"><ref bean="userManager"/></property>
+	<property name="xmlArchive"><ref bean="xmlArchive" /></property> </bean> <bean
+	id="DistributedDataModule" class="org.entermediadb.asset.modules.DistributedDataModule"> <property
+	name="localDataManager"><ref bean="localDataManager" /></property> </bean> -->
+	<!-- <bean id="dataFileSearcher" class="org.entermediadb.asset.cluster.DataFileSearcher">
+	<property name="pageManager"> <ref bean="pageManager" /> </property> <property
+	name="rootDirectory"> <ref bean="root" /> </property> </bean> -->
 	<bean id="OrderModule" class="org.entermediadb.asset.modules.OrderModule">
 	</bean>
 
@@ -945,7 +980,8 @@
 	<bean id="PublishModule" class="org.entermediadb.asset.publishing.PublishModule">
 	</bean>
 
-	<bean id="publishManager" class="org.entermediadb.asset.publishing.PublishManager" scope="prototype">
+	<bean id="publishManager" class="org.entermediadb.asset.publishing.PublishManager"
+		scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
@@ -972,8 +1008,6 @@
 	</bean>
 
 
-
-
 	<bean id="DataImportModule" class="org.entermediadb.asset.modules.DataImportModule">
 		<property name="scriptManager">
 			<ref bean="scriptManager" />
@@ -988,7 +1022,9 @@
 	</bean>
 
 
-	<bean id="ftpRepository" name="ftpRepository" class="org.entermediadb.asset.FtpRepository" abstract="false" scope="prototype" lazy-init="default" autowire="default" dependency-check="default">
+	<bean id="ftpRepository" name="ftpRepository" class="org.entermediadb.asset.FtpRepository"
+		abstract="false" scope="prototype" lazy-init="default" autowire="default"
+		dependency-check="default">
 		<property name="userManager">
 			<ref bean="userManager" />
 		</property>
@@ -1033,8 +1069,13 @@
 	<bean id="bsfScriptRunner" class="org.entermediadb.scripts.BsfScriptRunner" />
 
 	<bean id="sizer" class="org.openedit.util.Sizer" />
-	<!-- <bean id="luceneUserProfileSearcher" class="org.openedit.profile.UserProfileSearcher" scope="prototype"> <property name="pageManager"><ref bean="pageManager" /></property> <property name="xmlArchive"><ref bean="xmlArchive" /></property> <property name="moduleManager"><ref bean="moduleManager" /></property> <property name="rootDirectory"><ref bean="root" /></property> <property name="prefix"><value>users</value></property> 
-		<property name="newDataName"><value>userProfile</value></property> <property name="userManager"><ref bean="userManager" /></property> </bean> -->
+	<!-- <bean id="luceneUserProfileSearcher" class="org.openedit.profile.UserProfileSearcher"
+	scope="prototype"> <property name="pageManager"><ref bean="pageManager" /></property> <property
+	name="xmlArchive"><ref bean="xmlArchive" /></property> <property name="moduleManager"><ref
+	bean="moduleManager" /></property> <property name="rootDirectory"><ref bean="root" /></property>
+	<property name="prefix"><value>users</value></property> 
+		<property name="newDataName"><value>userProfile</value></property> <property
+	name="userManager"><ref bean="userManager" /></property> </bean> -->
 
 	<bean id="ProfileModule" class="org.entermediadb.asset.modules.ProfileModule">
 		<property name="userProfileManager">
@@ -1042,7 +1083,8 @@
 		</property>
 	</bean>
 
-	<bean id="BannerModule" name="BannerModule" class="org.entermediadb.images.BannerModule" abstract="false" lazy-init="default" autowire="default" dependency-check="default">
+	<bean id="BannerModule" name="BannerModule" class="org.entermediadb.images.BannerModule"
+		abstract="false" lazy-init="default" autowire="default" dependency-check="default">
 	</bean>
 	<bean id="videoEditor" class="org.entermediadb.videoedit.VideoEditor">
 
@@ -1081,7 +1123,8 @@
 	</bean>
 
 
-	<bean id="savedQueryManager" class="org.entermediadb.asset.savedqueries.SavedQueryManager" scope="prototype">
+	<bean id="savedQueryManager" class="org.entermediadb.asset.savedqueries.SavedQueryManager"
+		scope="prototype">
 		<property name="searcherManager">
 			<ref bean="searcherManager" />
 		</property>
@@ -1097,7 +1140,8 @@
 	</bean>
 
 
-	<bean id="exiftoolThumbTranscoder" class="org.entermediadb.asset.convert.transcoders.ExiftoolThumbTranscoder" lazy-init="default">
+	<bean id="exiftoolThumbTranscoder"
+		class="org.entermediadb.asset.convert.transcoders.ExiftoolThumbTranscoder" lazy-init="default">
 		<property name="pageManager">
 			<ref bean="pageManager" />
 		</property>
@@ -1116,7 +1160,6 @@
 	</bean>
 
 
-
 	<bean id="workspaceManager" class="org.entermediadb.workspace.WorkspaceManager">
 		<property name="searcherManager">
 			<ref bean="searcherManager" />
@@ -1129,7 +1172,8 @@
 		</property>
 	</bean>
 
-	<bean id="workspaceExportGenerator" class="org.entermediadb.asset.generators.WorkspaceExportGenerator">
+	<bean id="workspaceExportGenerator"
+		class="org.entermediadb.asset.generators.WorkspaceExportGenerator">
 		<property name="workspaceManager">
 			<ref bean="workspaceManager" />
 		</property>
@@ -1176,7 +1220,8 @@
 	</bean>
 
 
-	<bean id="xmlCategorySearcher" class="org.entermediadb.asset.xmldb.XmlCategorySearcher" scope="prototype">
+	<bean id="xmlCategorySearcher" class="org.entermediadb.asset.xmldb.XmlCategorySearcher"
+		scope="prototype">
 		<property name="searcherManager">
 			<ref bean="searcherManager" />
 		</property>
@@ -1256,7 +1301,8 @@
 	<bean id="Config" class="org.openedit.modules.settings.ConfigModule" />
 
 	<bean id="ProjectModule" class="org.entermediadb.projects.ProjectModule" lazy-init="default" />
-	<bean id="projectManager" class="org.entermediadb.projects.ProjectManager" lazy-init="default" scope="prototype">
+	<bean id="projectManager" class="org.entermediadb.projects.ProjectManager" lazy-init="default"
+		scope="prototype">
 		<property name="searcherManager">
 			<ref bean="searcherManager" />
 		</property>
@@ -1264,7 +1310,8 @@
 			<ref bean="moduleManager" />
 		</property>
 	</bean>
-	<bean id="folderManager" class="org.entermediadb.find.FolderManager" lazy-init="default" scope="prototype">
+	<bean id="folderManager" class="org.entermediadb.find.FolderManager" lazy-init="default"
+		scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
@@ -1314,7 +1361,8 @@
 	</bean>
 
 	<!-- Remove this one day -->
-	<bean id="elasticTransientSearcher" class="org.entermediadb.elasticsearch.searchers.BaseElasticSearcher" scope="prototype">
+	<bean id="elasticTransientSearcher"
+		class="org.entermediadb.elasticsearch.searchers.BaseElasticSearcher" scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
@@ -1326,7 +1374,8 @@
 		</property>
 	</bean>
 
-	<bean id="elasticDataSearcher" class="org.entermediadb.elasticsearch.searchers.BaseElasticSearcher" scope="prototype">
+	<bean id="elasticDataSearcher"
+		class="org.entermediadb.elasticsearch.searchers.BaseElasticSearcher" scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
@@ -1340,7 +1389,8 @@
 
 
 	<!-- Use beans.xml to enable this one -->
-	<bean id="elasticAssetSearcher" class="org.entermediadb.asset.search.BaseAssetSearcher" scope="prototype">
+	<bean id="elasticAssetSearcher" class="org.entermediadb.asset.search.BaseAssetSearcher"
+		scope="prototype">
 		<property name="dataConnector">
 			<ref bean="elasticAssetDataConnector" />
 		</property>
@@ -1356,7 +1406,8 @@
 
 	</bean>
 
-	<bean id="elasticAssetDataConnector" class="org.entermediadb.elasticsearch.searchers.ElasticAssetDataConnector" scope="prototype">
+	<bean id="elasticAssetDataConnector"
+		class="org.entermediadb.elasticsearch.searchers.ElasticAssetDataConnector" scope="prototype">
 		<property name="pageManager">
 			<ref bean="pageManager" />
 		</property>
@@ -1380,7 +1431,8 @@
 		</property>
 	</bean>
 
-	<bean id="elasticUserSearcher" class="org.entermediadb.elasticsearch.searchers.ElasticUserSearcher" scope="prototype">
+	<bean id="elasticUserSearcher"
+		class="org.entermediadb.elasticsearch.searchers.ElasticUserSearcher" scope="prototype">
 		<property name="newDataName">
 			<value>baseUser</value>
 		</property>
@@ -1408,7 +1460,8 @@
 	</bean>
 	<bean id="baseGroup" class="org.openedit.users.BaseGroup" scope="prototype">
 	</bean>
-	<bean id="elasticGroupSearcher" class="org.entermediadb.elasticsearch.searchers.ElasticGroupSearcher" scope="prototype">
+	<bean id="elasticGroupSearcher"
+		class="org.entermediadb.elasticsearch.searchers.ElasticGroupSearcher" scope="prototype">
 		<property name="newDataName">
 			<value>baseGroup</value>
 		</property>
@@ -1429,7 +1482,8 @@
 		</property>
 	</bean>
 
-	<bean id="elasticLockSearcher" class="org.entermediadb.elasticsearch.searchers.LockSearcher" scope="prototype">
+	<bean id="elasticLockSearcher" class="org.entermediadb.elasticsearch.searchers.LockSearcher"
+		scope="prototype">
 		<property name="elasticNodeManager">
 			<ref bean="elasticNodeManager" />
 		</property>
@@ -1450,7 +1504,8 @@
 		</property>
 
 	</bean>
-	<bean id="elasticLockManager" class="org.entermediadb.asset.cluster.ClusterLockManager" scope="prototype">
+	<bean id="elasticLockManager" class="org.entermediadb.asset.cluster.ClusterLockManager"
+		scope="prototype">
 		<property name="searcherManager">
 			<ref bean="searcherManager" />
 		</property>
@@ -1459,7 +1514,8 @@
 		</property>
 	</bean>
 
-	<bean id="elasticUserProfileSearcher" class="org.entermediadb.elasticsearch.searchers.ElasticUserProfileSearcher" scope="prototype">
+	<bean id="elasticUserProfileSearcher"
+		class="org.entermediadb.elasticsearch.searchers.ElasticUserProfileSearcher" scope="prototype">
 		<property name="newDataName">
 			<value>userProfile</value>
 		</property>
@@ -1483,7 +1539,8 @@
 		</property>
 	</bean>
 
-	<bean id="elasticXmlUserProfileSearcher" class="org.entermediadb.elasticsearch.searchers.ElasticXmlFileSearcher" scope="prototype">
+	<bean id="elasticXmlUserProfileSearcher"
+		class="org.entermediadb.elasticsearch.searchers.ElasticXmlFileSearcher" scope="prototype">
 		<property name="pageManager">
 			<ref bean="pageManager" />
 		</property>
@@ -1513,7 +1570,8 @@
 		</property>
 	</bean>
 
-	<bean id="elasticUserProfileSearcher" class="org.entermediadb.elasticsearch.searchers.BaseElasticSearcher" scope="prototype">
+	<bean id="elasticUserProfileSearcher"
+		class="org.entermediadb.elasticsearch.searchers.BaseElasticSearcher" scope="prototype">
 		<property name="elasticNodeManager">
 			<ref bean="elasticNodeManager" />
 		</property>
@@ -1531,7 +1589,8 @@
 		</property>
 	</bean>
 
-	<bean id="elasticXmlOrderItemSearcher" class="org.entermediadb.elasticsearch.searchers.ElasticXmlFileSearcher" scope="prototype">
+	<bean id="elasticXmlOrderItemSearcher"
+		class="org.entermediadb.elasticsearch.searchers.ElasticXmlFileSearcher" scope="prototype">
 		<property name="pageManager">
 			<ref bean="pageManager" />
 		</property>
@@ -1555,7 +1614,8 @@
 		</property>
 	</bean>
 
-	<bean id="elasticOrderItemSearcher" class="org.entermediadb.elasticsearch.searchers.BaseElasticSearcher" scope="prototype">
+	<bean id="elasticOrderItemSearcher"
+		class="org.entermediadb.elasticsearch.searchers.BaseElasticSearcher" scope="prototype">
 		<property name="elasticNodeManager">
 			<ref bean="elasticNodeManager" />
 		</property>
@@ -1568,7 +1628,8 @@
 	</bean>
 
 
-	<bean id="elasticListSearcher" class="org.entermediadb.elasticsearch.searchers.ElasticListSearcher" scope="prototype">
+	<bean id="elasticListSearcher"
+		class="org.entermediadb.elasticsearch.searchers.ElasticListSearcher" scope="prototype">
 		<property name="xmlSearcher">
 			<ref bean="xmlSearcher" />
 		</property>
@@ -1583,7 +1644,8 @@
 		</property>
 	</bean>
 
-	<bean id="elasticFolderSearcher" class="org.entermediadb.elasticsearch.searchers.ElasticListSearcher" scope="prototype">
+	<bean id="elasticFolderSearcher"
+		class="org.entermediadb.elasticsearch.searchers.ElasticListSearcher" scope="prototype">
 		<property name="xmlSearcher">
 			<ref bean="xmlFolderSearcher" />
 		</property>
@@ -1598,9 +1660,10 @@
 		</property>
 	</bean>
 
-	<bean id="elasticFastFolderSearcher" class="org.entermediadb.elasticsearch.searchers.ElasticListSearcher" scope="prototype">
+	<bean id="elasticFastFolderSearcher"
+		class="org.entermediadb.elasticsearch.searchers.ElasticListSearcher" scope="prototype">
 
-		<property name="saveToXml" value="false"/>
+		<property name="saveToXml" value="false" />
 
 		<property name="xmlSearcher">
 			<ref bean="xmlFolderSearcher" />
@@ -1616,7 +1679,8 @@
 		</property>
 	</bean>
 
-	<bean id="elasticCategorySearcher" class="org.entermediadb.elasticsearch.categories.ElasticCategorySearcher" scope="prototype">
+	<bean id="elasticCategorySearcher"
+		class="org.entermediadb.elasticsearch.categories.ElasticCategorySearcher" scope="prototype">
 		<property name="elasticNodeManager">
 			<ref bean="elasticNodeManager" />
 		</property>
@@ -1635,10 +1699,12 @@
 
 	</bean>
 
-	<bean id="elasticCategory" class="org.entermediadb.elasticsearch.categories.ElasticCategory" scope="prototype">
+	<bean id="elasticCategory" class="org.entermediadb.elasticsearch.categories.ElasticCategory"
+		scope="prototype">
 	</bean>
 
-	<bean id="elasticCategoryArchive" class="org.entermediadb.elasticsearch.categories.ElasticCategoryArchive" scope="prototype">
+	<bean id="elasticCategoryArchive"
+		class="org.entermediadb.elasticsearch.categories.ElasticCategoryArchive" scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
@@ -1647,7 +1713,8 @@
 		</property>
 	</bean>
 
-	<bean id="elasticOrderSearcher" class="org.entermediadb.elasticsearch.searchers.ElasticOrderSearcher" scope="prototype">
+	<bean id="elasticOrderSearcher"
+		class="org.entermediadb.elasticsearch.searchers.ElasticOrderSearcher" scope="prototype">
 		<property name="elasticNodeManager">
 			<ref bean="elasticNodeManager" />
 		</property>
@@ -1663,8 +1730,8 @@
 	</bean>
 
 
-
-	<bean id="assetAutoCompleteElasticSearcher" class="org.entermediadb.elasticsearch.searchers.ElasticAutoCompleteSearcher" scope="prototype">
+	<bean id="assetAutoCompleteElasticSearcher"
+		class="org.entermediadb.elasticsearch.searchers.ElasticAutoCompleteSearcher" scope="prototype">
 		<property name="elasticNodeManager">
 			<ref bean="elasticNodeManager" />
 		</property>
@@ -1682,7 +1749,8 @@
 		</property>
 	</bean>
 
-	<bean id="elasticAutoCompleteSearcher" class="org.entermediadb.elasticsearch.searchers.ElasticAutoCompleteSearcher" scope="prototype">
+	<bean id="elasticAutoCompleteSearcher"
+		class="org.entermediadb.elasticsearch.searchers.ElasticAutoCompleteSearcher" scope="prototype">
 		<property name="elasticNodeManager">
 			<ref bean="elasticNodeManager" />
 		</property>
@@ -1700,7 +1768,8 @@
 		</property>
 	</bean>
 
-	<bean id="elasticModuleSearchSearcher" class="org.entermediadb.elasticsearch.searchers.ElasticModuleSearchSearcher" scope="prototype">
+	<bean id="elasticModuleSearchSearcher"
+		class="org.entermediadb.elasticsearch.searchers.ElasticModuleSearchSearcher" scope="prototype">
 		<property name="elasticNodeManager">
 			<ref bean="elasticNodeManager" />
 		</property>
@@ -1718,7 +1787,9 @@
 			<value>false</value>
 		</property>
 	</bean>
-	<bean id="elasticModuleSearchKeywordSearcher" class="org.entermediadb.elasticsearch.searchers.ElasticModuleSearchKeywordSearcher" scope="prototype">
+	<bean id="elasticModuleSearchKeywordSearcher"
+		class="org.entermediadb.elasticsearch.searchers.ElasticModuleSearchKeywordSearcher"
+		scope="prototype">
 		<property name="elasticNodeManager">
 			<ref bean="elasticNodeManager" />
 		</property>
@@ -1737,7 +1808,8 @@
 		</property>
 	</bean>
 
-	<bean id="elasticLogSearcher" class="org.entermediadb.elasticsearch.searchers.ElasticLogSearcher" scope="prototype">
+	<bean id="elasticLogSearcher" class="org.entermediadb.elasticsearch.searchers.ElasticLogSearcher"
+		scope="prototype">
 		<property name="elasticNodeManager">
 			<ref bean="elasticNodeManager" />
 		</property>
@@ -1764,7 +1836,8 @@
 
 	</bean>
 
-	<bean id="elasticViewSearcher" class="org.entermediadb.elasticsearch.searchers.ElasticViewSearcher" scope="prototype">
+	<bean id="elasticViewSearcher"
+		class="org.entermediadb.elasticsearch.searchers.ElasticViewSearcher" scope="prototype">
 
 		<property name="xmlSearcher">
 			<ref bean="xmlFolderSearcher" />
@@ -1789,7 +1862,8 @@
 	</bean>
 
 
-	<bean id="elasticSettingsMenuSearcher" class="org.entermediadb.elasticsearch.searchers.ElasticSettingsMenuSearcher" scope="prototype">
+	<bean id="elasticSettingsMenuSearcher"
+		class="org.entermediadb.elasticsearch.searchers.ElasticSettingsMenuSearcher" scope="prototype">
 
 		<property name="xmlSearcher">
 			<ref bean="xmlFolderSearcher" />
@@ -1810,7 +1884,8 @@
 	</bean>
 
 
-	<bean id="elasticXmlFileSearcher" class="org.entermediadb.elasticsearch.searchers.ElasticXmlFileSearcher" scope="prototype">
+	<bean id="elasticXmlFileSearcher"
+		class="org.entermediadb.elasticsearch.searchers.ElasticXmlFileSearcher" scope="prototype">
 		<property name="pageManager">
 			<ref bean="pageManager" />
 		</property>
@@ -1831,7 +1906,8 @@
 		</property>
 	</bean>
 
-	<bean id="audioConversionManager" class="org.entermediadb.asset.convert.managers.AudioConversionManager" scope="prototype">
+	<bean id="audioConversionManager"
+		class="org.entermediadb.asset.convert.managers.AudioConversionManager" scope="prototype">
 		<property name="defaultTranscoder">
 			<ref bean="audioTranscoder" />
 		</property>
@@ -1843,7 +1919,8 @@
 		</property>
 	</bean>
 
-	<bean id="videoConversionManager" class="org.entermediadb.asset.convert.managers.VideoConversionManager" scope="prototype">
+	<bean id="videoConversionManager"
+		class="org.entermediadb.asset.convert.managers.VideoConversionManager" scope="prototype">
 		<property name="defaultTranscoder">
 			<ref bean="ffmpegTranscoder" />
 		</property>
@@ -1854,7 +1931,8 @@
 			</list>
 		</property>
 	</bean>
-	<bean id="originalConversionManager" class="org.entermediadb.asset.convert.managers.OriginalConversionManager" scope="prototype">
+	<bean id="originalConversionManager"
+		class="org.entermediadb.asset.convert.managers.OriginalConversionManager" scope="prototype">
 		<property name="inputLoaders">
 			<list>
 				<ref bean="originalInputLoader" />
@@ -1863,7 +1941,8 @@
 	</bean>
 
 
-	<bean id="imageConversionManager" class="org.entermediadb.asset.convert.managers.ImageConversionManager" scope="prototype">
+	<bean id="imageConversionManager"
+		class="org.entermediadb.asset.convert.managers.ImageConversionManager" scope="prototype">
 		<property name="defaultTranscoder">
 			<ref bean="imagemagickTranscoder" />
 		</property>
@@ -1879,27 +1958,23 @@
 		</property>
 	</bean>
 
-	<bean id="originalInputLoader" class="org.entermediadb.asset.convert.inputloaders.OriginalInputLoader" scope="prototype">
+	<bean id="originalInputLoader"
+		class="org.entermediadb.asset.convert.inputloaders.OriginalInputLoader" scope="prototype">
 	</bean>
 
-	<bean id="videoCacheLoader" class="org.entermediadb.asset.convert.inputloaders.VideoCacheLoader" scope="prototype">
+	<bean id="videoCacheLoader" class="org.entermediadb.asset.convert.inputloaders.VideoCacheLoader"
+		scope="prototype">
 	</bean>
 
-	<bean id="imageCacheLoader" class="org.entermediadb.asset.convert.inputloaders.ImageCacheLoader" scope="prototype">
+	<bean id="imageCacheLoader" class="org.entermediadb.asset.convert.inputloaders.ImageCacheLoader"
+		scope="prototype">
 		<property name="pageManager">
 			<ref bean="pageManager" />
 		</property>
 	</bean>
 
-	<bean id="imagemagickTranscoder" class="org.entermediadb.asset.convert.transcoders.ImagemagickTranscoder" scope="prototype">
-		<property name="pageManager">
-			<ref bean="pageManager" />
-		</property>
-		<property name="exec">
-			<ref bean="exec" />
-		</property>
-	</bean>
-	<bean id="waterMarkTranscoder" class="org.entermediadb.asset.convert.transcoders.WaterMarkTranscoder" scope="prototype">
+	<bean id="imagemagickTranscoder"
+		class="org.entermediadb.asset.convert.transcoders.ImagemagickTranscoder" scope="prototype">
 		<property name="pageManager">
 			<ref bean="pageManager" />
 		</property>
@@ -1907,7 +1982,8 @@
 			<ref bean="exec" />
 		</property>
 	</bean>
-	<bean id="cmykTranscoder" class="org.entermediadb.asset.convert.transcoders.CMYKTranscoder" scope="prototype">
+	<bean id="waterMarkTranscoder"
+		class="org.entermediadb.asset.convert.transcoders.WaterMarkTranscoder" scope="prototype">
 		<property name="pageManager">
 			<ref bean="pageManager" />
 		</property>
@@ -1915,17 +1991,8 @@
 			<ref bean="exec" />
 		</property>
 	</bean>
-
-	<bean id="gsTranscoder" class="org.entermediadb.asset.convert.transcoders.GsTranscoder" scope="prototype">
-		<property name="pageManager">
-			<ref bean="pageManager" />
-		</property>
-		<property name="exec">
-			<ref bean="exec" />
-		</property>
-	</bean>
-
-	<bean id="ffmpegimageTranscoder" class="org.entermediadb.asset.convert.transcoders.FfmpegImageTranscoder" scope="prototype">
+	<bean id="cmykTranscoder" class="org.entermediadb.asset.convert.transcoders.CMYKTranscoder"
+		scope="prototype">
 		<property name="pageManager">
 			<ref bean="pageManager" />
 		</property>
@@ -1934,7 +2001,8 @@
 		</property>
 	</bean>
 
-	<bean id="ffmpegTranscoder" class="org.entermediadb.asset.convert.transcoders.FfmpegVideoTranscoder" scope="prototype">
+	<bean id="gsTranscoder" class="org.entermediadb.asset.convert.transcoders.GsTranscoder"
+		scope="prototype">
 		<property name="pageManager">
 			<ref bean="pageManager" />
 		</property>
@@ -1943,7 +2011,28 @@
 		</property>
 	</bean>
 
-	<bean id="audioTranscoder" class="org.entermediadb.asset.convert.transcoders.FfmpegAudioTranscoder" scope="prototype">
+	<bean id="ffmpegimageTranscoder"
+		class="org.entermediadb.asset.convert.transcoders.FfmpegImageTranscoder" scope="prototype">
+		<property name="pageManager">
+			<ref bean="pageManager" />
+		</property>
+		<property name="exec">
+			<ref bean="exec" />
+		</property>
+	</bean>
+
+	<bean id="ffmpegTranscoder"
+		class="org.entermediadb.asset.convert.transcoders.FfmpegVideoTranscoder" scope="prototype">
+		<property name="pageManager">
+			<ref bean="pageManager" />
+		</property>
+		<property name="exec">
+			<ref bean="exec" />
+		</property>
+	</bean>
+
+	<bean id="audioTranscoder"
+		class="org.entermediadb.asset.convert.transcoders.FfmpegAudioTranscoder" scope="prototype">
 		<property name="pageManager">
 			<ref bean="pageManager" />
 		</property>
@@ -1998,32 +2087,74 @@
 	<bean id="ConvertModule" class="modules.convert.ConvertModule" />
 
 
-
-
-
-
 	<!-- GROOVY Script Version -->
 
-	<!-- <groovy id="cmykpreprocessorCreator" script-source="conversions/creators/cmykpreprocessorCreator.groovy" lazy-init="default"> <property name="pageManager"><ref bean="pageManager" /></property> <property name="exec"><ref bean="exec" /></property> </groovy> <groovy id="oofficeDocumentCreator" script-source="conversions/creators/oofficeDocumentCreator.groovy" lazy-init="default"> <property name="pageManager"><ref bean="pageManager" /></property> <property name="exec"><ref bean="exec" /></property> </groovy> <groovy id="originalCreator" script-source="conversions/creators/originalCreator.groovy" lazy-init="default"> <property name="pageManager"><ref bean="pageManager" /></property> <property name="exec"><ref bean="exec" /></property> </groovy> <groovy id="digitalrapidsCreator" script-source="conversions/creators/digitalrapidsCreator.groovy" lazy-init="default"> <property name="pageManager"><ref bean="pageManager" /></property> <property name="exec"><ref bean="exec" /></property> </groovy> <groovy id="audioCreator" script-source="conversions/creators/audioCreator.groovy" lazy-init="default"> <property name="pageManager"><ref bean="pageManager" /></property> <property name="exec"><ref bean="exec" /></property> </groovy> <groovy id="ffmpegCreator" script-source="conversions/creators/ffmpegCreator.groovy" lazy-init="default"> <property name="pageManager"><ref bean="pageManager" /></property> <property name="exec"><ref bean="exec" /></property> </groovy> <groovy id="ffmpegimageCreator" script-source="conversions/creators/ffmpegimageCreator.groovy" lazy-init="default"> <property name="pageManager"><ref bean="pageManager" /></property> <property name="exec"><ref bean="exec" /></property> </groovy> <groovy id="GhostScriptImageCreator" script-source="conversions/creators/GhostScriptImageCreator.groovy" lazy-init="default"> <property name="pageManager"><ref bean="pageManager" /></property> <property name="exec"><ref bean="exec" /></property> </groovy> -->
+	<!-- <groovy id="cmykpreprocessorCreator"
+	script-source="conversions/creators/cmykpreprocessorCreator.groovy" lazy-init="default"> <property
+	name="pageManager"><ref bean="pageManager" /></property> <property name="exec"><ref bean="exec"
+	/></property> </groovy> <groovy id="oofficeDocumentCreator"
+	script-source="conversions/creators/oofficeDocumentCreator.groovy" lazy-init="default"> <property
+	name="pageManager"><ref bean="pageManager" /></property> <property name="exec"><ref bean="exec"
+	/></property> </groovy> <groovy id="originalCreator"
+	script-source="conversions/creators/originalCreator.groovy" lazy-init="default"> <property
+	name="pageManager"><ref bean="pageManager" /></property> <property name="exec"><ref bean="exec"
+	/></property> </groovy> <groovy id="digitalrapidsCreator"
+	script-source="conversions/creators/digitalrapidsCreator.groovy" lazy-init="default"> <property
+	name="pageManager"><ref bean="pageManager" /></property> <property name="exec"><ref bean="exec"
+	/></property> </groovy> <groovy id="audioCreator"
+	script-source="conversions/creators/audioCreator.groovy" lazy-init="default"> <property
+	name="pageManager"><ref bean="pageManager" /></property> <property name="exec"><ref bean="exec"
+	/></property> </groovy> <groovy id="ffmpegCreator"
+	script-source="conversions/creators/ffmpegCreator.groovy" lazy-init="default"> <property
+	name="pageManager"><ref bean="pageManager" /></property> <property name="exec"><ref bean="exec"
+	/></property> </groovy> <groovy id="ffmpegimageCreator"
+	script-source="conversions/creators/ffmpegimageCreator.groovy" lazy-init="default"> <property
+	name="pageManager"><ref bean="pageManager" /></property> <property name="exec"><ref bean="exec"
+	/></property> </groovy> <groovy id="GhostScriptImageCreator"
+	script-source="conversions/creators/GhostScriptImageCreator.groovy" lazy-init="default"> <property
+	name="pageManager"><ref bean="pageManager" /></property> <property name="exec"><ref bean="exec"
+	/></property> </groovy> -->
 
-	<!-- <groovy id="amazonpublisher" script-source="org.entermediadb.asset.publish.publishersamazonpublisher.groovy" /> <groovy id="asperapublisher" script-source="org.entermediadb.asset.publish.publishersasperapublisher.groovy" /> -->
-	<!-- Not used <groovy id="entermediapublisher" script-source="org.entermediadb.asset.publish.publishersentermediapublisher.groovy" /> <groovy id="attachmentpublisher" script-source="org.entermediadb.asset.publish.publishersattachmentpublisher.groovy" /> <groovy id="pushpublisher" script-source="org.entermediadb.asset.publish.publisherspushpublisher.groovy" /> -->
-	<bean id="httppublisher" class="org.entermediadb.asset.publish.publishers.httppublisher" lazy-init="default" />
-	<bean id="emailpublisher" class="org.entermediadb.asset.publish.publishers.emailpublisher" lazy-init="default" />
-	<bean id="pushhttppublisher" class="org.entermediadb.asset.publish.publishers.pushhttppublisher" lazy-init="default" />
-	<bean id="externalpublisher" class="org.entermediadb.asset.publish.publishers.externalpublisher" lazy-init="default" />
-	<bean id="filecopypublisher" class="org.entermediadb.asset.publish.publishers.filecopypublisher" lazy-init="default" />
-	<bean id="ftppublisher" class="org.entermediadb.asset.publish.publishers.ftppublisher" lazy-init="default" />
-	<bean id="sftppublisher" class="org.entermediadb.asset.publish.publishers.sftppublisher" lazy-init="default" />
-	<bean id="smbpublisher" class="org.entermediadb.asset.publish.publishers.smbpublisher" lazy-init="default" />
-	<bean id="wordpresspublisher" class="org.entermediadb.asset.publish.publishers.wordpresspublisher" lazy-init="default" />
-	<bean id="gallerypublisher" class="org.entermediadb.asset.publish.publishers.gallerypublisher" lazy-init="default" />
+	<!-- <groovy id="amazonpublisher"
+	script-source="org.entermediadb.asset.publish.publishersamazonpublisher.groovy" /> <groovy
+	id="asperapublisher"
+	script-source="org.entermediadb.asset.publish.publishersasperapublisher.groovy" /> -->
+	<!-- Not used <groovy id="entermediapublisher"
+	script-source="org.entermediadb.asset.publish.publishersentermediapublisher.groovy" /> <groovy
+	id="attachmentpublisher"
+	script-source="org.entermediadb.asset.publish.publishersattachmentpublisher.groovy" /> <groovy
+	id="pushpublisher" script-source="org.entermediadb.asset.publish.publisherspushpublisher.groovy"
+	/> -->
+	<bean id="httppublisher" class="org.entermediadb.asset.publish.publishers.httppublisher"
+		lazy-init="default" />
+	<bean id="emailpublisher" class="org.entermediadb.asset.publish.publishers.emailpublisher"
+		lazy-init="default" />
+	<bean id="pushhttppublisher" class="org.entermediadb.asset.publish.publishers.pushhttppublisher"
+		lazy-init="default" />
+	<bean id="externalpublisher" class="org.entermediadb.asset.publish.publishers.externalpublisher"
+		lazy-init="default" />
+	<bean id="filecopypublisher" class="org.entermediadb.asset.publish.publishers.filecopypublisher"
+		lazy-init="default" />
+	<bean id="ftppublisher" class="org.entermediadb.asset.publish.publishers.ftppublisher"
+		lazy-init="default" />
+	<bean id="sftppublisher" class="org.entermediadb.asset.publish.publishers.sftppublisher"
+		lazy-init="default" />
+	<bean id="smbpublisher" class="org.entermediadb.asset.publish.publishers.smbpublisher"
+		lazy-init="default" />
+	<bean id="wordpresspublisher" class="org.entermediadb.asset.publish.publishers.wordpresspublisher"
+		lazy-init="default" />
+	<bean id="gallerypublisher" class="org.entermediadb.asset.publish.publishers.gallerypublisher"
+		lazy-init="default" />
 
-	<bean id="VizOnepublisher" class="org.entermediadb.asset.publish.publishers.vizonepublisher" lazy-init="default" />
-	<bean id="Pictopublisher" class="org.entermediadb.asset.publish.publishers.pictopublisher" lazy-init="default" />
-	<bean id="Avidpublisher" class="org.entermediadb.asset.publish.publishers.avidpublisher" lazy-init="default" />
+	<bean id="VizOnepublisher" class="org.entermediadb.asset.publish.publishers.vizonepublisher"
+		lazy-init="default" />
+	<bean id="Pictopublisher" class="org.entermediadb.asset.publish.publishers.pictopublisher"
+		lazy-init="default" />
+	<bean id="Avidpublisher" class="org.entermediadb.asset.publish.publishers.avidpublisher"
+		lazy-init="default" />
 
-	<bean id="searchSecurity" class="org.entermediadb.asset.search.BaseSearchSecurity" lazy-init="default">
+	<bean id="searchSecurity" class="org.entermediadb.asset.search.BaseSearchSecurity"
+		lazy-init="default">
 		<property name="cacheManager">
 			<ref bean="systemCacheManager" />
 		</property>
@@ -2031,15 +2162,20 @@
 			<ref bean="searcherManager" />
 		</property>
 	</bean>
-	<bean id="categorySearchSecurity" class="org.entermediadb.asset.search.categorySearchSecurity" lazy-init="default" />
-	<bean id="librarySearchSecurity" class="org.entermediadb.asset.search.librarySearchSecurity" lazy-init="default" />
-	<bean id="librarycollectionSearchSecurity" class="org.entermediadb.asset.search.librarycollectionSearchSecurity" lazy-init="default" />
-	<bean id="assetSearchSecurity" class="org.entermediadb.asset.search.AssetSearchSecurity" lazy-init="default">
+	<bean id="categorySearchSecurity" class="org.entermediadb.asset.search.categorySearchSecurity"
+		lazy-init="default" />
+	<bean id="librarySearchSecurity" class="org.entermediadb.asset.search.librarySearchSecurity"
+		lazy-init="default" />
+	<bean id="librarycollectionSearchSecurity"
+		class="org.entermediadb.asset.search.librarycollectionSearchSecurity" lazy-init="default" />
+	<bean id="assetSearchSecurity" class="org.entermediadb.asset.search.AssetSearchSecurity"
+		lazy-init="default">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
 	</bean>
-	<bean id="orderSearchSecurity" class="org.entermediadb.asset.search.OrderSearchSecurity" lazy-init="default">
+	<bean id="orderSearchSecurity" class="org.entermediadb.asset.search.OrderSearchSecurity"
+		lazy-init="default">
 		<property name="cacheManager">
 			<ref bean="systemCacheManager" />
 		</property>
@@ -2050,7 +2186,8 @@
 
 	<bean id="ConvertModule" class="modules.convert.ConvertModule" lazy-init="default" />
 
-	<bean id="documentConversionManager" class="org.entermediadb.asset.convert.managers.DocumentConversionManager" scope="prototype">
+	<bean id="documentConversionManager"
+		class="org.entermediadb.asset.convert.managers.DocumentConversionManager" scope="prototype">
 		<property name="defaultTranscoder">
 			<ref bean="oofficeTranscoder" />
 		</property>
@@ -2072,16 +2209,6 @@
 	</bean>
 
 
-
-
-
-
-
-
-
-
-
-
 	<bean id="oofficeTextExtractor" class="org.entermediadb.ooffice.OofficeTextExtractor">
 		<property name="metadataPdfExtractor">
 			<ref bean="pdfExtractor" />
@@ -2094,7 +2221,8 @@
 		</property>
 	</bean>
 
-	<bean id="defaultConversionManager" class="org.entermediadb.asset.convert.managers.DefaultConversionManager" scope="prototype">
+	<bean id="defaultConversionManager"
+		class="org.entermediadb.asset.convert.managers.DefaultConversionManager" scope="prototype">
 		<property name="inputLoaders">
 			<list>
 				<ref bean="originalInputLoader" />
@@ -2129,7 +2257,6 @@
 	</bean>
 
 
-
 	<bean id="elasticRepository" class="org.entermediadb.elasticsearch.ElasticsearchRepository">
 		<property name="searcherManager">
 			<ref bean="searcherManager" />
@@ -2149,7 +2276,8 @@
 		</property>
 	</bean>
 
-	<bean id="elasticLibraryCollectionSearcher" class="org.entermediadb.elasticsearch.searchers.BaseElasticSearcher" scope="prototype">
+	<bean id="elasticLibraryCollectionSearcher"
+		class="org.entermediadb.elasticsearch.searchers.BaseElasticSearcher" scope="prototype">
 		<property name="elasticNodeManager">
 			<ref bean="elasticNodeManager" />
 		</property>
@@ -2196,7 +2324,6 @@
 	</bean>
 
 
-
 	<bean id="GoogleModule" class="org.entermediadb.modules.GoogleModule">
 	</bean>
 
@@ -2219,14 +2346,16 @@
 	</bean>
 
 
-	<bean id="googleContactSearcher" class="org.entermediadb.google.GoogleContactSearcher" scope="prototype">
+	<bean id="googleContactSearcher" class="org.entermediadb.google.GoogleContactSearcher"
+		scope="prototype">
 
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
 	</bean>
 
-	<!-- bean id="zohoManager" class="org.entermediadb.zoho.ZohoManager" scope="prototype"> <property name="moduleManager"> <ref bean="moduleManager" /> </property> </bean -->
+	<!-- bean id="zohoManager" class="org.entermediadb.zoho.ZohoManager" scope="prototype"> <property
+	name="moduleManager"> <ref bean="moduleManager" /> </property> </bean -->
 
 	<bean id="queueManager" class="org.entermediadb.asset.convert.QueueManager" scope="prototype">
 		<property name="moduleManager">
@@ -2292,7 +2421,8 @@
 	<bean id="projectGoal" class="org.entermediadb.tasks.ProjectGoal" scope="prototype">
 	</bean>
 
-	<bean id="annotationManager" class="org.entermediadb.websocket.annotation.AnnotationManager" scope="prototype">
+	<bean id="annotationManager" class="org.entermediadb.websocket.annotation.AnnotationManager"
+		scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
@@ -2328,7 +2458,8 @@
 	<bean id="NotificationModule" class="org.entermediadb.modules.notification.NotificationModule">
 	</bean>
 
-	<bean id="categoryCollectionCache" class="org.entermediadb.webui.tree.CategoryCollectionCache" scope="prototype">
+	<bean id="categoryCollectionCache" class="org.entermediadb.webui.tree.CategoryCollectionCache"
+		scope="prototype">
 		<property name="searcherManager">
 			<ref bean="searcherManager" />
 		</property>
@@ -2372,7 +2503,8 @@
 		</property>
 	</bean>
 
-	<bean id="elementalTranscoder" class="org.entermediadb.asset.convert.transcoders.ElementalTranscoder" lazy-init="default">
+	<bean id="elementalTranscoder"
+		class="org.entermediadb.asset.convert.transcoders.ElementalTranscoder" lazy-init="default">
 		<property name="pageManager">
 			<ref bean="pageManager" />
 		</property>
@@ -2399,9 +2531,11 @@
 			<ref bean="userManager" />
 		</property>
 	</bean>
-	<!-- We dont use this <bean id="transactionLogger" class="org.openedit.data.TransactionLogger"> <property name="moduleManager"><ref bean="moduleManager"/></property> </bean> -->
+	<!-- We dont use this <bean id="transactionLogger" class="org.openedit.data.TransactionLogger">
+	<property name="moduleManager"><ref bean="moduleManager"/></property> </bean> -->
 	<!-- Could replace with a composite someday -->
-	<bean id="twofactorAuthenticator" class="org.entermediadb.authenticate.GoogleTwoFactorAuthenticator">
+	<bean id="twofactorAuthenticator"
+		class="org.entermediadb.authenticate.GoogleTwoFactorAuthenticator">
 		<property name="searcherManager">
 			<ref bean="searcherManager" />
 		</property>
@@ -2419,18 +2553,21 @@
 	<bean id="PayPalModule" class="org.entermediadb.modules.paypal.PayPalModule">
 	</bean>
 
-	<bean id="categoryTreeModel" class="org.entermediadb.asset.links.CategoryWebTreeModel" scope="prototype">
+	<bean id="categoryTreeModel" class="org.entermediadb.asset.links.CategoryWebTreeModel"
+		scope="prototype">
 	</bean>
 
-	<bean id="categoryTreeRenderer" class="org.entermediadb.asset.links.CatalogTreeRenderer" scope="prototype">
+	<bean id="categoryTreeRenderer" class="org.entermediadb.asset.links.CatalogTreeRenderer"
+		scope="prototype">
 	</bean>
 
 
-
-	<bean id="libraryTreeModel" class="org.entermediadb.projects.LibraryWebTreeModel" scope="prototype">
+	<bean id="libraryTreeModel" class="org.entermediadb.projects.LibraryWebTreeModel"
+		scope="prototype">
 	</bean>
 
-	<bean id="desktopTreeModel" class="org.entermediadb.desktops.DesktopWebTreeModel" scope="prototype">
+	<bean id="desktopTreeModel" class="org.entermediadb.desktops.DesktopWebTreeModel"
+		scope="prototype">
 	</bean>
 
 	<bean id="userNotifyManager" class="org.entermediadb.websocket.usernotify.UserNotifyManager">
@@ -2446,7 +2583,8 @@
 
 	</bean>
 
-	<bean id="faceDetectManager" class="org.entermediadb.asset.facedetect.FaceDetectManager" scope="prototype">
+	<bean id="faceDetectManager" class="org.entermediadb.asset.facedetect.FaceDetectManager"
+		scope="prototype">
 		<property name="exec">
 			<ref bean="exec" />
 		</property>
@@ -2521,10 +2659,13 @@
 	<bean id="EntityModule" class="org.entermediadb.asset.modules.EntityModule">
 	</bean>
 
-	<bean id="securityEnabledSearchSecurity" class="org.entermediadb.asset.search.SecurityEnabledSearchSecurity" lazy-init="default" scope="prototype">
+	<bean id="securityEnabledSearchSecurity"
+		class="org.entermediadb.asset.search.SecurityEnabledSearchSecurity" lazy-init="default"
+		scope="prototype">
 	</bean>
 
-	<bean id="entityManager" class="org.entermediadb.find.EntityManager" lazy-init="default" scope="prototype">
+	<bean id="entityManager" class="org.entermediadb.find.EntityManager" lazy-init="default"
+		scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
@@ -2534,7 +2675,8 @@
 	</bean>
 
 
-	<bean id="faceProfileManager" class="org.entermediadb.asset.facedetect.FaceProfileManager" lazy-init="default" scope="prototype">
+	<bean id="faceProfileManager" class="org.entermediadb.asset.facedetect.FaceProfileManager"
+		lazy-init="default" scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
@@ -2544,7 +2686,8 @@
 	</bean>
 
 
-	<bean id="customizationExportGenerator" class="org.entermediadb.workspace.CustomizationExportGenerator">
+	<bean id="customizationExportGenerator"
+		class="org.entermediadb.workspace.CustomizationExportGenerator">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
@@ -2561,7 +2704,8 @@
 	</bean>
 
 
-	<bean id="httpConnection" class="org.entermediadb.ai.llm.http.HttpConnection" scope="prototype" lazy-init="default">
+	<bean id="httpConnection" class="org.entermediadb.ai.llm.http.HttpConnection" scope="prototype"
+		lazy-init="default">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
@@ -2575,7 +2719,8 @@
 	</bean>
 
 
-	<bean id="contentPublishingSkill" class="org.entermediadb.ai.skills.ContentPublishingSkill" lazy-init="default" scope="prototype">
+	<bean id="contentPublishingSkill" class="org.entermediadb.ai.skills.ContentPublishingSkill"
+		lazy-init="default" scope="prototype">
 		<property name="xmlUtil">
 			<ref bean="xmlUtil" />
 		</property>
@@ -2587,7 +2732,8 @@
 		</property>
 	</bean>
 
-	<bean id="openaiConnection" class="org.entermediadb.ai.llm.openai.OpenAiConnection" scope="prototype">
+	<bean id="openaiConnection" class="org.entermediadb.ai.llm.openai.OpenAiConnection"
+		scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
@@ -2600,7 +2746,8 @@
 		</property>
 	</bean>
 
-	<bean id="llamaOpenAiConnection" class="org.entermediadb.ai.llm.llama.LlamaOpenAiConnection" scope="prototype">
+	<bean id="llamaOpenAiConnection" class="org.entermediadb.ai.llm.llama.LlamaOpenAiConnection"
+		scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
@@ -2613,7 +2760,8 @@
 		</property>
 	</bean>
 
-	<bean id="llamaVisionConnection" class="org.entermediadb.ai.llm.llama.LlamaVisionConnection" scope="prototype">
+	<bean id="llamaVisionConnection" class="org.entermediadb.ai.llm.llama.LlamaVisionConnection"
+		scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
@@ -2626,7 +2774,8 @@
 		</property>
 	</bean>
 
-	<bean id="ollamaConnection" class="org.entermediadb.ai.llm.ollama.OllamaConnection" scope="prototype">
+	<bean id="ollamaConnection" class="org.entermediadb.ai.llm.ollama.OllamaConnection"
+		scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
@@ -2660,13 +2809,15 @@
 		</property>
 	</bean>
 
-	<bean id="googleTranscriberManager" class="org.entermediadb.video.GoogleTranscriberManager" scope="prototype">
+	<bean id="googleTranscriberManager" class="org.entermediadb.video.GoogleTranscriberManager"
+		scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
 	</bean>
 
-	<bean id="transcriberManager" class="org.entermediadb.ai.transcriber.TranscriberManager" scope="prototype">
+	<bean id="transcriberManager" class="org.entermediadb.ai.transcriber.TranscriberManager"
+		scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
@@ -2677,18 +2828,21 @@
 		</property>
 	</bean>
 
-	<bean id="documentSplitterManager" class="org.entermediadb.ai.classify.DocumentSplitterManager" scope="prototype">
+	<bean id="documentSplitterManager" class="org.entermediadb.ai.classify.DocumentSplitterManager"
+		scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
 	</bean>
-	<bean id="documentSplitterSkill" class="org.entermediadb.ai.skills.DocumentSplitterSkill" scope="prototype">
+	<bean id="documentSplitterSkill" class="org.entermediadb.ai.skills.DocumentSplitterSkill"
+		scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
 	</bean>
 
-	<bean id="embeddingManager" class="org.entermediadb.ai.classify.EmbeddingManager" scope="prototype">
+	<bean id="embeddingManager" class="org.entermediadb.ai.classify.EmbeddingManager"
+		scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
@@ -2699,7 +2853,8 @@
 		</property>
 	</bean>
 
-	<bean id="assistantManager" class="org.entermediadb.ai.assistant.AssistantManager" scope="prototype">
+	<bean id="assistantManager" class="org.entermediadb.ai.assistant.AssistantManager"
+		scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
@@ -2723,55 +2878,64 @@
 		</property>
 	</bean>
 
-	<bean id="emeChatDetectSkill" class="org.entermediadb.ai.skills.EmeChatDetectSkill" scope="prototype">
+	<bean id="emeChatDetectSkill" class="org.entermediadb.ai.skills.EmeChatDetectSkill"
+		scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
 	</bean>
 
-	<bean id="mediaCreatorSkill" class="org.entermediadb.ai.skills.MediaCreationSkill" scope="prototype">
+	<bean id="mediaCreatorSkill" class="org.entermediadb.ai.skills.MediaCreationSkill"
+		scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
 	</bean>
 
-	<bean id="agentJobCreatorSkill" class="org.entermediadb.ai.skills.AgentJobCreatorSkill" scope="prototype">
+	<bean id="agentJobCreatorSkill" class="org.entermediadb.ai.skills.AgentJobCreatorSkill"
+		scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
 	</bean>
 
-	<bean id="agentJobRunnerSkill" class="org.entermediadb.ai.skills.AgentJobRunnerSkill" scope="prototype">
+	<bean id="agentJobRunnerSkill" class="org.entermediadb.ai.skills.AgentJobRunnerSkill"
+		scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
 	</bean>
 
-	<bean id="agentJobStatusSkill" class="org.entermediadb.ai.skills.AgentJobStatusSkill" scope="prototype">
+	<bean id="agentJobStatusSkill" class="org.entermediadb.ai.skills.AgentJobStatusSkill"
+		scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
 	</bean>
 
-	<bean id="openCodeApproveSkill" class="org.entermediadb.ai.skills.OpenCodeApproveSkill" scope="prototype">
+	<bean id="openCodeApproveSkill" class="org.entermediadb.ai.skills.OpenCodeApproveSkill"
+		scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
 	</bean>
 
-	<bean id="openCodeAnswerSkill" class="org.entermediadb.ai.skills.OpenCodeAnswerSkill" scope="prototype">
+	<bean id="openCodeAnswerSkill" class="org.entermediadb.ai.skills.OpenCodeAnswerSkill"
+		scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
 	</bean>
 
-	<bean id="openCodeUserRequestSkill" class="org.entermediadb.ai.skills.OpenCodeUserRequestSkill" scope="prototype">
+	<bean id="openCodeUserRequestSkill" class="org.entermediadb.ai.skills.OpenCodeUserRequestSkill"
+		scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
 	</bean>
 
-	<bean id="openCodeRunnerSkill" class="org.entermediadb.ai.skills.OpenCodeRunnerSkill" scope="prototype">
+	<bean id="openCodeRunnerSkill" class="org.entermediadb.ai.skills.OpenCodeRunnerSkill"
+		scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
@@ -2781,63 +2945,72 @@
 	</bean>
 
 
-
-	<bean id="emeChatRespondSkill" class="org.entermediadb.ai.skills.EmeChatRespondSkill" scope="prototype">
+	<bean id="emeChatRespondSkill" class="org.entermediadb.ai.skills.EmeChatRespondSkill"
+		scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
 	</bean>
 
-	<bean id="emeTeamChatRespondSkill" class="org.entermediadb.ai.skills.EmeTeamChatRespondSkill" scope="prototype">
+	<bean id="emeTeamChatRespondSkill" class="org.entermediadb.ai.skills.EmeTeamChatRespondSkill"
+		scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
 	</bean>
 
-	<bean id="chatCreateGoalSkill" class="org.entermediadb.ai.skills.ChatCreateGoalSkill" scope="prototype">
-		<property name="moduleManager">
-			<ref bean="moduleManager" />
-		</property>
-	</bean>
-	
-	<bean id="taskCreateChannelSkill" class="org.entermediadb.ai.skills.TaskCreateChannelSkill" scope="prototype">
-		<property name="moduleManager">
-			<ref bean="moduleManager" />
-		</property>
-	</bean>
-	
-
-	<bean id="goalTaskCreationSkill" class="org.entermediadb.ai.skills.GoalTaskCreationSkill" scope="prototype">
+	<bean id="chatCreateGoalSkill" class="org.entermediadb.ai.skills.ChatCreateGoalSkill"
+		scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
 	</bean>
 
-	<bean id="questionsMakeSuggestionsSkill" class="org.entermediadb.ai.skills.QuestionsMakeSuggestionsSkill" scope="prototype">
+	<bean id="taskCreateChannelSkill" class="org.entermediadb.ai.skills.TaskCreateChannelSkill"
+		scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
 	</bean>
 
-	<bean id="questionsAskSkill" class="org.entermediadb.ai.skills.QuestionsAskSkill" scope="prototype">
+
+	<bean id="goalTaskCreationSkill" class="org.entermediadb.ai.skills.GoalTaskCreationSkill"
+		scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
 	</bean>
 
-	<bean id="tutorialsManager" class="org.entermediadb.ai.assistant.TutorialsManager" scope="prototype">
+	<bean id="questionsMakeSuggestionsSkill"
+		class="org.entermediadb.ai.skills.QuestionsMakeSuggestionsSkill" scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
 	</bean>
 
-	<bean id="autoDetectWelcomeSkill" class="org.entermediadb.ai.skills.AutoDetectWelcomeSkill" scope="prototype">
+	<bean id="questionsAskSkill" class="org.entermediadb.ai.skills.QuestionsAskSkill"
+		scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
 	</bean>
 
-	<bean id="renderLocalTemplateSkill" class="org.entermediadb.ai.skills.RenderLocalTemplateSkill" scope="prototype">
+	<bean id="tutorialsManager" class="org.entermediadb.ai.assistant.TutorialsManager"
+		scope="prototype">
+		<property name="moduleManager">
+			<ref bean="moduleManager" />
+		</property>
+	</bean>
+
+	<bean id="autoDetectWelcomeSkill" class="org.entermediadb.ai.skills.AutoDetectWelcomeSkill"
+		scope="prototype">
+		<property name="moduleManager">
+			<ref bean="moduleManager" />
+		</property>
+	</bean>
+
+	<bean id="renderLocalTemplateSkill" class="org.entermediadb.ai.skills.RenderLocalTemplateSkill"
+		scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
@@ -2849,13 +3022,15 @@
 		</property>
 	</bean>
 
-	<bean id="chatMonitorResponseSkill" class="org.entermediadb.ai.skills.ChatMonitorResponseSkill" scope="prototype">
+	<bean id="chatMonitorResponseSkill" class="org.entermediadb.ai.skills.ChatMonitorResponseSkill"
+		scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
 	</bean>
 
-	<bean id="markdownToHtmlSkill" class="org.entermediadb.ai.skills.MarkdownToHtmlSkill" scope="prototype">
+	<bean id="markdownToHtmlSkill" class="org.entermediadb.ai.skills.MarkdownToHtmlSkill"
+		scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
@@ -2864,42 +3039,47 @@
 	<bean id="SmartCreatorModule" class="org.entermediadb.ai.creator.SmartCreatorModule">
 	</bean>
 
-	<bean id="handleWebEventSkill" class="org.entermediadb.ai.skills.HandleWebEventSkill" scope="prototype">
+	<bean id="handleWebEventSkill" class="org.entermediadb.ai.skills.HandleWebEventSkill"
+		scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
 	</bean>
 
-	<bean id="assetImportCreated" class="org.entermediadb.ai.skills.AssetImportCreatedSkill" scope="prototype">
+	<bean id="assetImportCreated" class="org.entermediadb.ai.skills.AssetImportCreatedSkill"
+		scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
 	</bean>
-	<bean id="assetImportImported" class="org.entermediadb.ai.skills.AssetImportImportedSkill" scope="prototype">
+	<bean id="assetImportImported" class="org.entermediadb.ai.skills.AssetImportImportedSkill"
+		scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
 	</bean>
 
-	<bean id="processNeedsMetadataSkill" class="org.entermediadb.ai.skills.ProcessNeedsMetadataSkill" scope="prototype">
+	<bean id="processNeedsMetadataSkill" class="org.entermediadb.ai.skills.ProcessNeedsMetadataSkill"
+		scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
 	</bean>
 
-	<bean id="queueConversionsSkill" class="org.entermediadb.ai.skills.QueueConversionsSkill" scope="prototype">
+	<bean id="queueConversionsSkill" class="org.entermediadb.ai.skills.QueueConversionsSkill"
+		scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
 	</bean>
 
 	<!-- Not used yet-->
-	<bean id="runConversionsSkill" class="org.entermediadb.ai.skills.RunConversionsSkill" scope="prototype">
+	<bean id="runConversionsSkill" class="org.entermediadb.ai.skills.RunConversionsSkill"
+		scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
 	</bean>
-
 
 
 	<bean id="runEventSkill" class="org.entermediadb.ai.skills.RunEventSkill" scope="prototype">
@@ -2907,112 +3087,130 @@
 			<ref bean="moduleManager" />
 		</property>
 	</bean>
-	<bean id="runSharedEventSkill" class="org.entermediadb.ai.skills.RunSharedEventSkill" scope="prototype">
+	<bean id="runSharedEventSkill" class="org.entermediadb.ai.skills.RunSharedEventSkill"
+		scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
 	</bean>
 
 
-	<bean id="chatSmartCreatorConfirmationSkill" class="org.entermediadb.ai.skills.ChatSmartCreatorConfirmationSkill" scope="prototype">
+	<bean id="chatSmartCreatorConfirmationSkill"
+		class="org.entermediadb.ai.skills.ChatSmartCreatorConfirmationSkill" scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
 	</bean>
 
-	<bean id="smartCreatorRenderFinishedOutlineSkill" class="org.entermediadb.ai.skills.SmartCreatorRenderFinishedOutlineSkill" scope="prototype">
+	<bean id="smartCreatorRenderFinishedOutlineSkill"
+		class="org.entermediadb.ai.skills.SmartCreatorRenderFinishedOutlineSkill" scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
 	</bean>
 
-	<bean id="smartCreatorMakeSuggestionsSkill" class="org.entermediadb.ai.skills.SmartCreatorMakeSuggestionsSkill" scope="prototype">
+	<bean id="smartCreatorMakeSuggestionsSkill"
+		class="org.entermediadb.ai.skills.SmartCreatorMakeSuggestionsSkill" scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
 	</bean>
 
-	<bean id="smartCreatorPlaybackSkill" class="org.entermediadb.ai.skills.SmartCreatorPlaybackSkill" scope="prototype">
+	<bean id="smartCreatorPlaybackSkill" class="org.entermediadb.ai.skills.SmartCreatorPlaybackSkill"
+		scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
 	</bean>
 
-	<bean id="smartCreatorProcessPendingSkill" class="org.entermediadb.ai.skills.SmartCreatorProcessPendingSkill" scope="prototype">
+	<bean id="smartCreatorProcessPendingSkill"
+		class="org.entermediadb.ai.skills.SmartCreatorProcessPendingSkill" scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
 	</bean>
 
-	<bean id="smartCreatorParseUserPromptSkill" class="org.entermediadb.ai.skills.SmartCreatorParseUserPromptSkill" scope="prototype">
+	<bean id="smartCreatorParseUserPromptSkill"
+		class="org.entermediadb.ai.skills.SmartCreatorParseUserPromptSkill" scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
 	</bean>
 
-	<bean id="smartCreatorFindMemoryFilesSkill" class="org.entermediadb.ai.skills.SmartCreatorFindMemoryFilesSkill" scope="prototype">
+	<bean id="smartCreatorFindMemoryFilesSkill"
+		class="org.entermediadb.ai.skills.SmartCreatorFindMemoryFilesSkill" scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
 	</bean>
-	<bean id="smartCreatorCreateOutlineSkill" class="org.entermediadb.ai.skills.SmartCreatorCreateOutlineSkill" scope="prototype">
+	<bean id="smartCreatorCreateOutlineSkill"
+		class="org.entermediadb.ai.skills.SmartCreatorCreateOutlineSkill" scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
 	</bean>
-	<bean id="smartCreatorMakeSectionsSkill" class="org.entermediadb.ai.skills.SmartCreatorMakeSectionsSkill" scope="prototype">
+	<bean id="smartCreatorMakeSectionsSkill"
+		class="org.entermediadb.ai.skills.SmartCreatorMakeSectionsSkill" scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
 	</bean>
-	<bean id="smartCreatorCreateQuestionsSkill" class="org.entermediadb.ai.skills.SmartCreatorCreateQuestionsSkill" scope="prototype">
+	<bean id="smartCreatorCreateQuestionsSkill"
+		class="org.entermediadb.ai.skills.SmartCreatorCreateQuestionsSkill" scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
 	</bean>
-	<bean id="smartCreatorRenderAssetSkill" class="org.entermediadb.ai.skills.SmartCreatorRenderAssetSkill" scope="prototype">
-		<property name="moduleManager">
-			<ref bean="moduleManager" />
-		</property>
-	</bean>
-
-	<bean id="adaptiveTutorialWelcomeSkill" class="org.entermediadb.ai.skills.AdaptiveTutorialWelcomeSkill" scope="prototype">
-		<property name="moduleManager">
-			<ref bean="moduleManager" />
-		</property>
-	</bean>
-	<bean id="adaptiveTutorialContinueSkill" class="org.entermediadb.ai.skills.AdaptiveTutorialContinueSkill" scope="prototype">
-		<property name="moduleManager">
-			<ref bean="moduleManager" />
-		</property>
-	</bean>
-	<bean id="adaptiveTutorialAnswerSkill" class="org.entermediadb.ai.skills.AdaptiveTutorialAnswerSkill" scope="prototype">
-		<property name="moduleManager">
-			<ref bean="moduleManager" />
-		</property>
-	</bean>
-	<bean id="adaptiveTutorialProgressSkill" class="org.entermediadb.ai.skills.AdaptiveTutorialProgressSkill" scope="prototype">
-		<property name="moduleManager">
-			<ref bean="moduleManager" />
-		</property>
-	</bean>
-	<bean id="adaptiveTutorialEndSkill" class="org.entermediadb.ai.skills.AdaptiveTutorialEndSkill" scope="prototype">
-		<property name="moduleManager">
-			<ref bean="moduleManager" />
-		</property>
-	</bean>
-	<bean id="adaptiveTutorialUserCommentSkill" class="org.entermediadb.ai.skills.AdaptiveTutorialUserCommentSkill" scope="prototype">
+	<bean id="smartCreatorRenderAssetSkill"
+		class="org.entermediadb.ai.skills.SmartCreatorRenderAssetSkill" scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
 	</bean>
 
-	<bean id="runningscenario" class="org.entermediadb.ai.automation.RunningScenario" scope="prototype">
+	<bean id="adaptiveTutorialWelcomeSkill"
+		class="org.entermediadb.ai.skills.AdaptiveTutorialWelcomeSkill" scope="prototype">
+		<property name="moduleManager">
+			<ref bean="moduleManager" />
+		</property>
+	</bean>
+	<bean id="adaptiveTutorialContinueSkill"
+		class="org.entermediadb.ai.skills.AdaptiveTutorialContinueSkill" scope="prototype">
+		<property name="moduleManager">
+			<ref bean="moduleManager" />
+		</property>
+	</bean>
+	<bean id="adaptiveTutorialAnswerSkill"
+		class="org.entermediadb.ai.skills.AdaptiveTutorialAnswerSkill" scope="prototype">
+		<property name="moduleManager">
+			<ref bean="moduleManager" />
+		</property>
+	</bean>
+	<bean id="adaptiveTutorialProgressSkill"
+		class="org.entermediadb.ai.skills.AdaptiveTutorialProgressSkill" scope="prototype">
+		<property name="moduleManager">
+			<ref bean="moduleManager" />
+		</property>
+	</bean>
+	<bean id="adaptiveTutorialEndSkill" class="org.entermediadb.ai.skills.AdaptiveTutorialEndSkill"
+		scope="prototype">
+		<property name="moduleManager">
+			<ref bean="moduleManager" />
+		</property>
+	</bean>
+	<bean id="adaptiveTutorialUserCommentSkill"
+		class="org.entermediadb.ai.skills.AdaptiveTutorialUserCommentSkill" scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
 	</bean>
 
+	<bean id="runningscenario" class="org.entermediadb.ai.automation.RunningScenario"
+		scope="prototype">
+		<property name="moduleManager">
+			<ref bean="moduleManager" />
+		</property>
+	</bean>
 
 
 	<bean id="baseAgentContext" class="org.entermediadb.ai.llm.BaseAgentContext" scope="prototype">
@@ -3052,7 +3250,8 @@
 		</property>
 	</bean>
 
-	<bean id="youtubeImporterSkill" class="org.entermediadb.ai.skills.YoutubeImporterSkill" scope="prototype">
+	<bean id="youtubeImporterSkill" class="org.entermediadb.ai.skills.YoutubeImporterSkill"
+		scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
@@ -3105,7 +3304,8 @@
 
 	</bean>
 
-	<bean id="dropboxAssetSource" class="org.entermediadb.dropbox.DropboxAssetSource" scope="prototype">
+	<bean id="dropboxAssetSource" class="org.entermediadb.dropbox.DropboxAssetSource"
+		scope="prototype">
 		<property name="webServer">
 			<ref bean="WebServer" />
 		</property>
@@ -3117,72 +3317,88 @@
 		</property>
 	</bean>
 
-	<bean id="faceProfileManager" class="org.entermediadb.asset.facedetect.FaceProfileManager" lazy-init="default" scope="prototype">
+	<bean id="faceProfileManager" class="org.entermediadb.asset.facedetect.FaceProfileManager"
+		lazy-init="default" scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
 	</bean>
-	<bean id="faceProfileSkill" class="org.entermediadb.ai.skills.FaceProfileSkill" lazy-init="default" scope="prototype">
-		<property name="moduleManager">
-			<ref bean="moduleManager" />
-		</property>
-	</bean>
-
-	<bean id="informaticsProcessorManager" class="org.entermediadb.ai.informatics.InformaticsProcessorManager" lazy-init="default" scope="prototype">
-		<property name="moduleManager">
-			<ref bean="moduleManager" />
-		</property>
-	</bean>
-	<bean id="informaticsProcessorSkill" class="org.entermediadb.ai.skills.InformaticsProcessorSkill" lazy-init="default" scope="prototype">
+	<bean id="faceProfileSkill" class="org.entermediadb.ai.skills.FaceProfileSkill"
+		lazy-init="default" scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
 	</bean>
 
-	<bean id="semanticClassifierManager" class="org.entermediadb.ai.classify.SemanticClassifierManager" lazy-init="default" scope="prototype">
+	<bean id="informaticsProcessorManager"
+		class="org.entermediadb.ai.informatics.InformaticsProcessorManager" lazy-init="default"
+		scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
 	</bean>
-	<bean id="semanticClassifierSkill" class="org.entermediadb.ai.skills.SemanticClassifierSkill" lazy-init="default" scope="prototype">
-		<property name="moduleManager">
-			<ref bean="moduleManager" />
-		</property>
-	</bean>
-
-	<bean id="semanticTableManager" class="org.entermediadb.ai.classify.SemanticTableManager" lazy-init="default" scope="prototype">
-		<property name="moduleManager">
-			<ref bean="moduleManager" />
-		</property>
-	</bean>
-
-
-	<bean id="semanticConfig" class="org.entermediadb.ai.classify.SemanticConfig" lazy-init="default" scope="prototype">
+	<bean id="informaticsProcessorSkill" class="org.entermediadb.ai.skills.InformaticsProcessorSkill"
+		lazy-init="default" scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
 	</bean>
 
-	<bean id="namedEntityRecognitionManager" class="org.entermediadb.ai.classify.NamedEntityRecognitionManager" lazy-init="default" scope="prototype">
+	<bean id="semanticClassifierManager"
+		class="org.entermediadb.ai.classify.SemanticClassifierManager" lazy-init="default"
+		scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
 	</bean>
-	<bean id="namedEntityRecognitionSkill" class="org.entermediadb.ai.skills.NamedEntityRecognitionSkill" lazy-init="default" scope="prototype">
+	<bean id="semanticClassifierSkill" class="org.entermediadb.ai.skills.SemanticClassifierSkill"
+		lazy-init="default" scope="prototype">
+		<property name="moduleManager">
+			<ref bean="moduleManager" />
+		</property>
+	</bean>
+
+	<bean id="semanticTableManager" class="org.entermediadb.ai.classify.SemanticTableManager"
+		lazy-init="default" scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
 	</bean>
 
 
-	<bean id="kMeansIndexer" class="org.entermediadb.ai.knn.KMeansIndexer" lazy-init="default" scope="prototype">
+	<bean id="semanticConfig" class="org.entermediadb.ai.classify.SemanticConfig" lazy-init="default"
+		scope="prototype">
+		<property name="moduleManager">
+			<ref bean="moduleManager" />
+		</property>
+	</bean>
+
+	<bean id="namedEntityRecognitionManager"
+		class="org.entermediadb.ai.classify.NamedEntityRecognitionManager" lazy-init="default"
+		scope="prototype">
+		<property name="moduleManager">
+			<ref bean="moduleManager" />
+		</property>
+	</bean>
+	<bean id="namedEntityRecognitionSkill"
+		class="org.entermediadb.ai.skills.NamedEntityRecognitionSkill" lazy-init="default"
+		scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
 	</bean>
 
 
-	<bean id="pubLookUp" class="org.entermediadb.modules.publishing.PubLookUp" lazy-init="default" scope="prototype">
+	<bean id="kMeansIndexer" class="org.entermediadb.ai.knn.KMeansIndexer" lazy-init="default"
+		scope="prototype">
+		<property name="moduleManager">
+			<ref bean="moduleManager" />
+		</property>
+	</bean>
+
+
+	<bean id="pubLookUp" class="org.entermediadb.modules.publishing.PubLookUp" lazy-init="default"
+		scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
@@ -3194,31 +3410,37 @@
 		</property>
 	</bean>
 
-	<bean id="TranslationModule" class="org.entermediadb.translator.TranslationModule" lazy-init="default" scope="prototype">
+	<bean id="TranslationModule" class="org.entermediadb.translator.TranslationModule"
+		lazy-init="default" scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
 	</bean>
 
-	<bean id="translationManager" class="org.entermediadb.translator.TranslationManager" lazy-init="default" scope="prototype">
+	<bean id="translationManager" class="org.entermediadb.translator.TranslationManager"
+		lazy-init="default" scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
 	</bean>
 
-	<bean id="googleGlossaryManagerSkill" class="org.entermediadb.ai.skills.GoogleGlossaryManagerSkill" lazy-init="default" scope="prototype">
+	<bean id="googleGlossaryManagerSkill"
+		class="org.entermediadb.ai.skills.GoogleGlossaryManagerSkill" lazy-init="default"
+		scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
 	</bean>
 
-	<bean id="fixCustomFieldSkill" class="org.entermediadb.ai.skills.FixCustomFieldSkill" lazy-init="default" scope="prototype">
+	<bean id="fixCustomFieldSkill" class="org.entermediadb.ai.skills.FixCustomFieldSkill"
+		lazy-init="default" scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
 	</bean>
 
-	<bean id="translationSkill" class="org.entermediadb.ai.skills.TranslationSkill" lazy-init="default" scope="prototype">
+	<bean id="translationSkill" class="org.entermediadb.ai.skills.TranslationSkill"
+		lazy-init="default" scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
@@ -3230,7 +3452,38 @@
 		</property>
 	</bean>
 
-	<bean id="topicManager" class="org.entermediadb.topic.TopicManager" lazy-init="default" scope="prototype">
+	<bean id="topicManager" class="org.entermediadb.topic.TopicManager" lazy-init="default"
+		scope="prototype">
+		<property name="moduleManager">
+			<ref bean="moduleManager" />
+		</property>
+	</bean>
+
+
+	<bean id="EmeProfileModule" class="org.entermediadb.profile.EmeProfileModule"
+		lazy-init="default">
+		<property name="moduleManager">
+			<ref bean="moduleManager" />
+		</property>
+	</bean>
+	<bean id="emeProfileManager" class="org.entermediadb.profile.EmeProfileManager"
+		lazy-init="default"
+		scope="prototype">
+		<property name="moduleManager">
+			<ref bean="moduleManager" />
+		</property>
+	</bean>
+
+	<bean id="DirectMessageModule" class="org.entermediadb.profile.DirectMessageModule"
+		lazy-init="default">
+		<property name="moduleManager">
+			<ref bean="moduleManager" />
+		</property>
+	</bean>
+
+	<bean id="directMessageManager" class="org.entermediadb.profile.DirectMessageManager"
+		lazy-init="default"
+		scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
@@ -3240,79 +3493,92 @@
 	<bean id="cssutils" class="org.openedit.util.CSSUtils" />
 	<bean id="inflector" class="org.entermediadb.util.Inflector" />
 
-	<bean id="AutomationModule" class="org.entermediadb.ai.automation.AutomationModule" lazy-init="default">
+	<bean id="AutomationModule" class="org.entermediadb.ai.automation.AutomationModule"
+		lazy-init="default">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
 	</bean>
 
-	<bean id="automationManager" class="org.entermediadb.ai.automation.AutomationManager" lazy-init="default" scope="prototype">
+	<bean id="automationManager" class="org.entermediadb.ai.automation.AutomationManager"
+		lazy-init="default" scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
 	</bean>
 
-	<bean id="runModuleSkill" class="org.entermediadb.ai.skills.RunModuleSkill" lazy-init="default" scope="prototype">
+	<bean id="runModuleSkill" class="org.entermediadb.ai.skills.RunModuleSkill" lazy-init="default"
+		scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
 	</bean>
 
-	<bean id="hotFolderSourceSkill" class="org.entermediadb.ai.skills.HotFolderSourceSkill" lazy-init="default" scope="prototype">
+	<bean id="hotFolderSourceSkill" class="org.entermediadb.ai.skills.HotFolderSourceSkill"
+		lazy-init="default" scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
 	</bean>
 
-	<bean id="imapMailCheckerSkill" class="org.entermediadb.ai.skills.ImapMailCheckerSkill" lazy-init="default" scope="prototype">
+	<bean id="imapMailCheckerSkill" class="org.entermediadb.ai.skills.ImapMailCheckerSkill"
+		lazy-init="default" scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
 	</bean>
 
-	<bean id="imapMailSenderSkill" class="org.entermediadb.ai.skills.ImapMailSenderSkill" lazy-init="default" scope="prototype">
+	<bean id="imapMailSenderSkill" class="org.entermediadb.ai.skills.ImapMailSenderSkill"
+		lazy-init="default" scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
 	</bean>
 
-	<bean id="questionManagerSkill" class="org.entermediadb.ai.skills.QuestionManagerSkill" lazy-init="default" scope="prototype">
+	<bean id="questionManagerSkill" class="org.entermediadb.ai.skills.QuestionManagerSkill"
+		lazy-init="default" scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
 	</bean>
 
-	<bean id="embeddingFinderSkill" class="org.entermediadb.ai.skills.EmbeddingFinderSkill" lazy-init="default" scope="prototype">
+	<bean id="embeddingFinderSkill" class="org.entermediadb.ai.skills.EmbeddingFinderSkill"
+		lazy-init="default" scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
 	</bean>
 
-	<bean id="webContentExtractorSkill" class="org.entermediadb.ai.skills.WebContentExtractorSkill" lazy-init="default" scope="prototype">
+	<bean id="webContentExtractorSkill" class="org.entermediadb.ai.skills.WebContentExtractorSkill"
+		lazy-init="default" scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
 	</bean>
 
-	<bean id="fileOperationSkill" class="org.entermediadb.ai.skills.FileOperationSkill" lazy-init="default" scope="prototype">
+	<bean id="fileOperationSkill" class="org.entermediadb.ai.skills.FileOperationSkill"
+		lazy-init="default" scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
 	</bean>
 
-	<bean id="informaticsContext" class="org.entermediadb.ai.informatics.InformaticsContext" lazy-init="default" scope="prototype">
+	<bean id="informaticsContext" class="org.entermediadb.ai.informatics.InformaticsContext"
+		lazy-init="default" scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
 	</bean>
 
-	<bean id="informaticsContext" class="org.entermediadb.ai.informatics.InformaticsContext" lazy-init="default" scope="prototype">
+	<bean id="informaticsContext" class="org.entermediadb.ai.informatics.InformaticsContext"
+		lazy-init="default" scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
 	</bean>
 
-	<bean id="languageFixer" class="org.entermediadb.translator.LanguageFixer" lazy-init="default" scope="prototype">
+	<bean id="languageFixer" class="org.entermediadb.translator.LanguageFixer" lazy-init="default"
+		scope="prototype">
 		<property name="pageManager">
 			<ref bean="pageManager" />
 		</property>
@@ -3321,38 +3587,43 @@
 		</property>
 	</bean>
 
-	<bean id="agentjob" class="org.entermediadb.ai.agentjobs.AgentJob" lazy-init="default" scope="prototype">
+	<bean id="agentjob" class="org.entermediadb.ai.agentjobs.AgentJob" lazy-init="default"
+		scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
 	</bean>
 
-	<bean id="agentJobOrchestrator" class="org.entermediadb.ai.agentjobs.AgentJobOrchestrator" lazy-init="default" scope="prototype">
+	<bean id="agentJobOrchestrator" class="org.entermediadb.ai.agentjobs.AgentJobOrchestrator"
+		lazy-init="default" scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
 	</bean>
 
-	<bean id="AgentJobModule" class="org.entermediadb.ai.agentjobs.AgentJobModule" lazy-init="default" >
+	<bean id="AgentJobModule" class="org.entermediadb.ai.agentjobs.AgentJobModule" lazy-init="default">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
 	</bean>
 
 
-	<bean id="handleErrorSkill" class="org.entermediadb.ai.skills.HandleErrorSkill" lazy-init="default" scope="prototype">
+	<bean id="handleErrorSkill" class="org.entermediadb.ai.skills.HandleErrorSkill"
+		lazy-init="default" scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
 	</bean>
 
-	<bean id="csvImporter" class="org.entermediadb.asset.importer.CsvImporter" lazy-init="default" scope="prototype">
+	<bean id="csvImporter" class="org.entermediadb.asset.importer.CsvImporter" lazy-init="default"
+		scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
 	</bean>
 
-	<bean id="openCodeClient" class="org.entermediadb.mcp.client.OpenCodeClient" lazy-init="default" scope="prototype">
+	<bean id="openCodeClient" class="org.entermediadb.mcp.client.OpenCodeClient" lazy-init="default"
+		scope="prototype">
 		<property name="moduleManager">
 			<ref bean="moduleManager" />
 		</property>
