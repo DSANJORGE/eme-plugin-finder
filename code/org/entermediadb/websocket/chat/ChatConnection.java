@@ -313,6 +313,13 @@ public class ChatConnection extends Endpoint implements MessageHandler.Partial<S
 				}
 				map.put("message", messageplain);
 
+				if (map.get("messagetype") == null)
+				{
+					map.put("messagetype", chat.get("messagetype"));
+				}
+
+				map.put("icon", map.get("apphome") + "/theme/images/logo-square.png");
+
 				getChatServer().broadcastMessage(catalogid, map);
 				archive.fireDataEvent(auser, "chatterbox", "messagereceived", chat);
 
