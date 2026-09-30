@@ -47,6 +47,7 @@ import org.openedit.users.User;
 import org.openedit.util.DateStorageUtil;
 import org.openedit.util.ExecutorManager;
 import org.openedit.util.JSONParser;
+import org.entermediadb.websocket.push.WebPushManager;
 
 public class ChatServer
 {
@@ -221,17 +222,17 @@ public class ChatServer
 			MultiValued channel = (MultiValued) archive.getCachedData("channel", channelid);
 			String channelmoduleid = channel.get("searchtype");
 
-			String userid = null;
+			String usermessageid = null;
 			if (inMap.get("user") != null)
 			{
-				userid = inMap.get("user").toString();
+				usermessageid = inMap.get("user").toString();
 			}
 			String messageid = (String) inMap.get("messageid");
 			if (channelid != null)
 			{
 				if (channelmoduleid != null && "collectiveproject".equals(channelmoduleid))
 				{
-					manager.updateChatTopicLastModified(channel.get("dataid"), userid, messageid);
+					manager.updateChatTopicLastModified(channel.get("dataid"), usermessageid, messageid);
 				}
 
 			}
@@ -239,7 +240,7 @@ public class ChatServer
 			ProjectManager projectmanager = getProjectManager(catalogid);
 			if (inMap.get("name") == null)
 			{
-				User user = archive.getUser(userid);
+				User user = archive.getUser(usermessageid);
 				if (user != null)
 				{
 					inMap.put("name", user.getScreenName());
@@ -339,7 +340,7 @@ public class ChatServer
 					userids.add("agent");
 				}
 
-				userids.add(userid); // always the message author
+				userids.add(usermessageid); // always the message author
 
 				userids.add(channel.get("user"));
 			}
@@ -388,6 +389,90 @@ public class ChatServer
 						if (connectedUser != null)
 						{
 							manager.updateChatTopicLastChecked(String.valueOf(channelid), connectedUser);
+						}
+					}
+				}
+			});
+
+			// Push browser notifications to subscribed users who are not currently connected
+			final Set pushUserids = userids;
+			pushUserids.remove(usermessageid); //remove the message author from push notifications
+			pushUserids.remove("agent"); //remove the agent
+			final Data pushEntity = entity;
+			getExecutorManager(catalogid).execute(new Runnable() {
+				@Override
+				public void run()
+				{
+					WebPushManager webPushManager = getWebPushManager();
+					if (webPushManager == null)
+					{
+						return;
+					}
+
+					Object messageText = inMap.get("message");
+					if (!inMap.get("messagetype").equals("message"))
+					{
+						return; //Only push real messages
+					}
+					if (messageText == null)
+					{
+						messageText = inMap.get("messageplain");
+					}
+					if (messageText == null) 
+					{
+						return; // No message to push
+					}
+
+					Set connectedUsers = new HashSet();
+					for (Iterator iterator = connections.iterator(); iterator.hasNext();)
+					{
+						ChatConnection chatConnection = (ChatConnection) iterator.next();
+						connectedUsers.add(chatConnection.getUserId());
+					}
+
+					JSONObject pushPayload = new JSONObject();
+					Object authorName = inMap.get("name");
+					pushPayload.put("name", authorName != null ? authorName.toString() : "New message");
+					String topic = null;
+					if (pushEntity != null)
+					{
+						Object entityName = pushEntity.get("name");
+						if (entityName != null && !entityName.toString().equals(""))
+						{
+							topic = entityName.toString();
+						}
+					}
+					if (topic == null)
+					{
+						topic = String.valueOf(inMap.get("channel"));
+					}
+					pushPayload.put("topic", topic);
+					pushPayload.put("message", messageText.toString());
+
+					if (inMap.get("icon") != null)
+					{
+						pushPayload.put("icon", inMap.get("icon").toString());
+					}
+
+					for (Iterator iterator = pushUserids.iterator(); iterator.hasNext();)
+					{
+						String pushUserId = (String) iterator.next();
+						if (pushUserId == null || "agent".equals(pushUserId) || "anonymous".equals(pushUserId))
+						{
+							continue;
+						}
+						if (connectedUsers.contains(pushUserId))
+						{
+							// Already delivered over the live WebSocket connection
+							//continue;
+						}
+						try
+						{
+							webPushManager.pushToUser(catalogid, pushUserId, pushPayload.toJSONString());
+						}
+						catch (Exception e)
+						{
+							log.error("Web push failed for user " + pushUserId, e);
 						}
 					}
 				}
@@ -542,6 +627,12 @@ public class ChatServer
 	{
 		ChatManager queue = (ChatManager) getModuleManager().getBean(inCatalogId, "chatManager");
 		return queue;
+	}
+
+	public WebPushManager getWebPushManager()
+	{
+		WebPushManager manager = (WebPushManager) getModuleManager().getBean("system", "webPushManager");
+		return manager;
 	}
 
 	public ProjectManager getProjectManager(String inCatalogId)
