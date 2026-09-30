@@ -23,4 +23,17 @@ public class AgentJobModule extends BaseMediaModule
         }
     }
 
+    public void checkRepeatingJobs(WebPageRequest inReq)
+    {
+        String catalogid = inReq.findValue("catalogid");
+        AgentJobOrchestrator orchestrator = (AgentJobOrchestrator) getModuleManager().getBean(catalogid, "agentJobOrchestrator", true);
+        int count = orchestrator.checkRepeatingJobs();
+
+        ScriptLogger logger = (ScriptLogger) inReq.getPageValue("log");
+        if( logger != null)
+        {
+            logger.info("Repeating agent jobs " + count + " due to run");
+        }
+    }
+
 }

@@ -1,5 +1,10 @@
 package org.entermediadb.ai.agentjobs;
 
+import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
@@ -15,7 +20,6 @@ import org.entermediadb.ai.automation.AutomationManager;
 import org.entermediadb.ai.llm.BaseAgentContext;
 import org.entermediadb.asset.MediaArchive;
 import org.entermediadb.mcp.client.OpenCodeClient;
-import org.entermediadb.scripts.LogListener;
 import org.openedit.CatalogEnabled;
 import org.openedit.Data;
 import org.openedit.ModuleManager;
@@ -25,6 +29,7 @@ import org.openedit.data.Searcher;
 import org.openedit.hittracker.HitTracker;
 import org.openedit.util.ExecutorManager;
 import org.openedit.util.JSONParser;
+import org.openedit.util.OutputFiller;
 
 public class AgentJobOrchestrator implements AgentJobListener, CatalogEnabled
 {
@@ -172,6 +177,7 @@ public class AgentJobOrchestrator implements AgentJobListener, CatalogEnabled
 				torun.setContext(context);
 				torun.setAgentJob(job);
 				torun.setEventListener(this);
+				torun.setAgentJobRun(createAgentJobRun(job));
 				addAgentJob(torun);
 			}
 		}
@@ -289,6 +295,19 @@ public class AgentJobOrchestrator implements AgentJobListener, CatalogEnabled
 		inAgentJob.getContext().put("agentjobstep",inStep);
 
 		String userrequest = inStep.get("markdowncontent"); //Starting point for each job
+		if( inAgentJob.getAgentJob().get("repeatperiod") != null)
+		{
+			//Skills may replace markdowncontent with their output, so keep the original request for the next repeat
+			String original = inStep.get("userrequest");
+			if( original == null)
+			{
+				inStep.setValue("userrequest", userrequest);
+			}
+			else
+			{
+				userrequest = original;
+			}
+		}
 		inAgentJob.getContext().put("userrequest", userrequest);
 
 			Skill skill = (Skill) getModuleManager().getBean(getCatalogId(), aiskill.get("bean"));
@@ -427,6 +446,181 @@ public class AgentJobOrchestrator implements AgentJobListener, CatalogEnabled
 	}
 
 
+
+	public void finishedRun(AgentJobRunnable inAgentJob)
+	{
+		currentJobsRunning.remove(inAgentJob.getId()); //Also released when a step threw an error
+		Data run = inAgentJob.getAgentJobRun();
+		if( run == null)
+		{
+			return;
+		}
+		try
+		{
+			AgentJob job = inAgentJob.getAgentJob();
+			StringBuffer markdown = new StringBuffer();
+			for (MultiValued step : job.getSteps())
+			{
+				Data saved = getMediaArchive().getCachedData("agentjobstep", step.getId());
+				String content = saved == null ? null : saved.get("markdowncontent");
+				if( content != null && !content.isEmpty())
+				{
+					if( markdown.length() > 0)
+					{
+						markdown.append("\n\n---\n\n");
+					}
+					markdown.append(content);
+				}
+			}
+			run.setValue("markdowncontent", trimToFit(markdown.toString()));
+			run.setValue("enddate", new Date());
+			run.setValue("status", inAgentJob.hasComplete() ? "complete" : "error");
+			getMediaArchive().saveData("agentjobrun", run);
+		}
+		catch (Exception ex)
+		{
+			log.error("Could not save agentjobrun " + run.getId(), ex);
+		}
+	}
+
+	protected Data createAgentJobRun(AgentJob inJob)
+	{
+		Data run = getMediaArchive().getSearcher("agentjobrun").createNewData();
+		run.setValue("agentjob", inJob.getId());
+		run.setValue("startdate", new Date());
+		run.setValue("status", "running");
+		getMediaArchive().saveData("agentjobrun", run);
+		return run;
+	}
+
+	/** Lucene rejects terms over 32766 bytes, so cut the end off long logs */
+	protected String trimToFit(String inText)
+	{
+		if( inText == null || inText.getBytes(StandardCharsets.UTF_8).length <= 30000)
+		{
+			return inText;
+		}
+		return new OutputFiller().splitUtf8(inText, 30000).get(0);
+	}
+
+	/**
+	 * Queues any agentjob whose repeatperiod (daily, weekly, monthly) and repeattime (HH:mm) say it is due.
+	 * Due jobs are set back to "new" so checkQueue picks them up.
+	 * @return how many jobs were queued
+	 */
+	public int checkRepeatingJobs()
+	{
+		HitTracker jobs = getMediaArchive().query("agentjob").exists("repeatperiod").search();
+		jobs.enableBulkOperations();
+		int count = 0;
+		for (Iterator iterator = jobs.iterator(); iterator.hasNext();)
+		{
+			Data hit = (Data) iterator.next();
+			try
+			{
+				AgentJob job = (AgentJob) getMediaArchive().getCachedData("agentjob", hit.getId());
+				String status = job.get("status");
+				//Only repeat jobs that are finished. Skip running, queued or ones waiting on a person
+				if( status != null && !"complete".equals(status) && !"error".equals(status))
+				{
+					continue;
+				}
+				if( currentJobsRunning.containsKey(job.getId()) || !isRepeatDue(job, new Date()))
+				{
+					continue;
+				}
+				resetForRepeat(job);
+				count++;
+			}
+			catch (Exception ex)
+			{
+				log.error("Could not check repeating agentjob " + hit.getId(), ex);
+			}
+		}
+		if( count > 0)
+		{
+			checkQueue();
+		}
+		return count;
+	}
+
+	public boolean isRepeatDue(AgentJob inJob, Date inNow)
+	{
+		String period = inJob.get("repeatperiod");
+		LocalTime time = parseRepeatTime(inJob.get("repeattime"));
+		if( period == null || time == null)
+		{
+			return false;
+		}
+		ZoneId zone = ZoneId.systemDefault();
+		LocalDateTime now = LocalDateTime.ofInstant(inNow.toInstant(), zone);
+
+		Data lastrun = getMediaArchive().query("agentjobrun").exact("agentjob", inJob.getId()).sort("startdateDown").searchOne();
+		Date laststart = lastrun == null ? null : ((MultiValued) lastrun).getDate("startdate");
+		if( laststart == null)
+		{
+			//Never run before, start at the next repeattime
+			return !now.isBefore(LocalDateTime.of(now.toLocalDate(), time));
+		}
+		//Snap to repeattime on the day of the last run so late runs do not drift
+		LocalDate lastday = LocalDateTime.ofInstant(laststart.toInstant(), zone).toLocalDate();
+		LocalDateTime next;
+		switch (period)
+		{
+			case "daily":
+				next = LocalDateTime.of(lastday.plusDays(1), time);
+				break;
+			case "weekly":
+				next = LocalDateTime.of(lastday.plusWeeks(1), time);
+				break;
+			case "monthly":
+				next = LocalDateTime.of(lastday.plusMonths(1), time);
+				break;
+			default:
+				log.error("Unknown repeatperiod " + period + " on agentjob " + inJob.getId());
+				return false;
+		}
+		return !now.isBefore(next);
+	}
+
+	protected LocalTime parseRepeatTime(String inTime)
+	{
+		if( inTime == null || inTime.trim().isEmpty())
+		{
+			return null;
+		}
+		String[] parts = inTime.trim().split(":");
+		try
+		{
+			int hour = Integer.parseInt(parts[0]);
+			int minute = parts.length > 1 ? Integer.parseInt(parts[1]) : 0;
+			return LocalTime.of(hour, minute);
+		}
+		catch (Exception ex)
+		{
+			log.error("Invalid repeattime " + inTime + " expected HH:mm like 03:40");
+			return null;
+		}
+	}
+
+	protected void resetForRepeat(AgentJob inJob)
+	{
+		inJob.setSteps(null); //Reload from database
+		for (MultiValued step : inJob.getSteps())
+		{
+			step.setValue("status", "new");
+			step.setValue("errordetails", null);
+			getOpenCodeClient().clearStatus(step.getId()); //Start a new opencode session
+			getMediaArchive().saveData("agentjobstep", step);
+		}
+		inJob.setValue("status", "new");
+		inJob.setValue("errordetails", null);
+		inJob.setValue("submitteddate", new Date());
+		inJob.setValue("startdate", new Date());
+		inJob.setValue("enddate", null);
+		getMediaArchive().saveData("agentjob", inJob);
+		log.info("Queued repeating agentjob " + inJob.getId());
+	}
 
 	public ExecutorManager getThreads()
 	{
