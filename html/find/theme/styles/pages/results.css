@@ -4023,7 +4023,7 @@ ul.inlinelist li {
 	z-index: 210;
 	padding: 8px;
 	font-size: 0.9rem;
-	border-bottom: var(--1px-light);
+	border-bottom: 1px solid var(--gray-border);
 	background: var(--themed-tab-btn);
 }
 .tabtypeentitymedia 
