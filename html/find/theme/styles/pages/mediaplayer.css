@@ -880,9 +880,12 @@ li.assettabnav {
 	display: inline-block;
 	padding: 8px 12px;
 	border-right: 1px solid var(--themed-tab-btn-hover);
+		color: var(--themed-tab-btn-text);
+	background-color: var(--themed-tab-btn);
 }
 .lighttheme .asset-data-readwritemetadata a {
 	color: var(--themed-tab-btn-text);
+	background-color: var(--themed-tab-btn);
 	border-right: var(--1px-light);
 }
 .asset-data-readwritemetadata a:hover {
