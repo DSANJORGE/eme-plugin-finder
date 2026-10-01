@@ -186,7 +186,7 @@ li.dropdown {
 .emsubnav ul.resultsnav li a.dropdown-item {
 	padding: 0.25em 0.5em 0.25em 0.75em;
 	color: var(--themed-tab-btn-text);
-	background: var(--themed-tab-btn-active);
+	background: var(--themed-tab-btn-hover);
 	line-height: 30px;
 }
 .emsubnav .resultsnav .dropdown-menu .dropdown-item:hover {
