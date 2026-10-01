@@ -5,7 +5,7 @@
 	justify-content: space-between;
 	position: relative;
 	height: calc(var(--nav-btn-height) + 1px);
-	background: var(--themed-navbar-secondary);
+	background: var(--themed-tab-bar);
 	width: 100%;
 	margin: 0;
 	padding: 0;
@@ -43,8 +43,8 @@
 	display: inline-block;
 	line-height: var(--nav-btn-height);
 	height: var(--nav-btn-height);
-	background: var(--themed-navbar-secondary);
-	color: var(--themed-navbar-secondary-text);
+	background: var(--themed-tab-btn);
+	color: var(--themed-tab-btn-text);
 	transition: all 0.2s ease-in-out;
 	border-radius: 0 !important;
 }
@@ -54,7 +54,7 @@
 }
 .emsubnav ul.resultsnav li:hover > a.resultsnavlink,
 .emsubnav ul.resultsnav li a.resultsnavlink:hover {
-	background: var(--themed-nav-btn-hover);
+	background: var(--themed-tab-btn-hover);
 }
 .lighttheme .emsubnav ul.resultsnav li:hover > a.resultsnavlink,
 .lighttheme .emsubnav ul.resultsnav li a.resultsnavlink:hover {
@@ -85,7 +85,7 @@ ul.table-positions-top {
 	color: inherit;
 	/* line-height: 2.5; */
 	display: inline-block;
-	background: var(--themed-navbar-secondary);
+	background: var(--themed-tab-btn);
 	/* overflow: hidden; */
 }
 .lighttheme .emsubnav ul.resultsnavright li a,
@@ -94,7 +94,7 @@ ul.table-positions-top {
 	color: var(--default-text);
 }
 .resultsnavitem {
-	background: var(--themed-navbar-secondary);
+	background: var(--themed-tab-btn);
 }
 .lighttheme .resultmenuitem {
 	background: var(--light-bg);
@@ -102,7 +102,7 @@ ul.table-positions-top {
 .resultsnavitem:hover,
 .emsubnav ul.resultsnavright li a:hover,
 .emsubnav .select2-container--open {
-	background: var(--themed-nav-btn-hover) !important;
+	background: var(--themed-tab-btn-hover) !important;
 }
 .lighttheme .resultsnavitem:hover,
 .lighttheme .emsubnav ul.resultsnavright li a:hover,
@@ -120,8 +120,8 @@ ul.table-positions-top {
 .resultsnavright li,
 .resultsnav > li {
 	height: var(--nav-btn-height);
-	background: var(--themed-navbar-secondary);
-	color: var(--themed-navbar-secondary-text);
+	background: var(--themed-tab-btn);
+	color: var(--themed-tab-btn-text);
 	transition: all 0.2s ease-in-out;
 }
 .lighttheme .resultsnavright li,
@@ -168,10 +168,10 @@ ul.summary-secondary-nav select.form-control {
 	padding: 0 6px;
 	border: 0;
 	border-radius: 0 !important;
-	background-color: var(--themed-navbar-secondary);
-	color: var(--themed-navbar-secondary-text) !important;
-	border-left: 2px solid var(--themed-navbar-secondary);
-	border-right: 4px solid var(--themed-navbar-secondary);
+	background-color: var(--themed-tab-btn);
+	color: var(--themed-tab-btn-text) !important;
+	border-left: 2px solid var(--themed-tab-btn);
+	border-right: 4px solid var(--themed-tab-btn);
 	--bs-form-select-bg-img: url('data:image/svg+xml,<svg width="150px" height="150px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M 21.025,7.585 12,18.415 2.975,7.585 Z" fill="%23efefef" id="path2" style="stroke-width:2" /></svg>');
 }
 .lighttheme ul.resultsnav select.form-control,
@@ -3146,9 +3146,6 @@ td .emgridcell a i.module-icon {
 .lighttheme .entity-tab {
 	height: 40px;
 }
-.entity-tab:last-child {
-	border-right: 0 none;
-}
 .entity-tab a img {
 	margin-right: 4px;
 }
@@ -4049,9 +4046,14 @@ ul.inlinelist li {
 	z-index: 210;
 	padding: 8px;
 	font-size: 0.9rem;
-	border-bottom: 1px solid var(--dark-border);
-	background: var(--themed-navbar-secondary);
+	border-bottom: var(--1px-light);
+	background: var(--themed-tab-btn);
 }
+.tabtypeentitymedia 
+{
+	border-top:var(--1px-light);
+}
+
 #categorywithtree .breadCrumbContainer {
 	top: 0 !important;
 }
@@ -4162,11 +4164,12 @@ ul.inlinelist li {
 	padding: 5px;
 }
 .embedmediacol-tree .embedmediacolheader {
-	font-weight: bold;
-	font-size: 16px;
-	line-height: 36px;
-	height: 36px;
+	font-weight: 600;
+	font-size: 0.9rem;
+	
 	position: relative;
+	height: 32px;
+	line-height:32px;
 	transition: all 0.2s ease-in-out;
 }
 .dialogmediacol-faceprofiles {
@@ -4175,7 +4178,7 @@ ul.inlinelist li {
 .embedmediacolactions {
 	height: calc(var(--nav-btn-height) + 1px);
 	position: relative;
-	background: var(--themed-navbar-secondary);
+	background: var(--themed-tab-btn);
 }
 .lighttheme .embedmediacolactions {
 	height: 37px;
@@ -4183,16 +4186,16 @@ ul.inlinelist li {
 	background: var(--light-bg);
 }
 .embedmediacolactions a {
-	color: var(--themed-navbar-secondary-text);
-	width: 36px;
-	height: 36px;
-	line-height: 36px;
+	color: var(--themed-tab-btn-text);
+	width: 32px;
+	height: 32px;
+	line-height: 32px;
 	text-align: center;
 	transition: all 0.2s ease-in-out;
 }
 .embedmediacolactions a:hover,
 .embedmediacolactions a:hover .embedmediacolheader {
-	background: var(--themed-nav-btn-hover);
+	background: var(--themed-tab-btn-hover);
 }
 .lighttheme .embedmediacolactions a:hover,
 .lighttheme .embedmediacolactions a:hover .embedmediacolheader {
@@ -4700,8 +4703,8 @@ ul.summary-secondary-nav li a:hover {
 .embedmediacolheader,
 .summary-header,
 .summary-edit-fields {
-	background: var(--themed-navbar-secondary);
-	color: var(--themed-navbar-secondary-text);
+	background: var(--themed-tab-btn);
+	color: var(--themed-tab-btn-text);
 	display: flex;
 	align-items: center;
 
@@ -4728,8 +4731,8 @@ ul.summary-secondary-nav li a:hover {
 }
 .summary-toggler,
 .summary-opener {
+	color: var(--themed-tab-btn-text);
 	height: var(--nav-btn-height);
-	font-weight: 600;
 	transition: all 0.2s ease-in-out;
 	cursor: pointer;
 }
@@ -4740,7 +4743,7 @@ ul.summary-secondary-nav li a:hover {
 .summary-toggler .btn,
 .summary-opener .btn {
 	height: var(--nav-btn-height);
-	color: var(--themed-navbar-secondary-text);
+	color: var(--themed-tab-btn-text);
 }
 .lighttheme .summary-toggler .btn,
 .lighttheme .summary-opener .btn {
@@ -4749,8 +4752,8 @@ ul.summary-secondary-nav li a:hover {
 .summary-toggler:hover,
 .summary-opener:hover,
 .summary-edit-fields:hover {
-	color: var(--themed-navbar-secondary-text);
-	background: var(--themed-nav-btn-hover) !important;
+	color: var(--themed-tab-btn-text);
+	background: var(--themed-tab-btn-hover) !important;
 }
 .lighttheme .summary-toggler:hover,
 .lighttheme .summary-opener:hover {
@@ -4762,6 +4765,7 @@ ul.summary-secondary-nav li a:hover {
 }
 
 .summary-header h3 {
+	color: var(--themed-tab-btn-text);
 	padding: 0 4px 0 38px;
 	margin: 0;
 	flex: 1;
@@ -4900,27 +4904,6 @@ ul.summary-secondary-nav li a:hover {
 .filters-sidebar-selected li a.linkarea {
 	display: block;
 	text-decoration: none;
-}
-.col-sidebar-header h2 {
-	height: 40px;
-	line-height: 40px;
-	text-align: center;
-	font-size: 0.9rem;
-	font-weight: bold;
-	text-transform: uppercase;
-	margin: 0;
-	color: var(--themed-navbar-secondary-text);
-	background: var(--themed-navbar-secondary);
-}
-.sidebar-header-action {
-	margin-left: 2px;
-	float: right;
-	padding: 0 14px;
-	font-size: 1rem;
-	color: #eee;
-}
-.sidebar-header-action:hover {
-	color: #fff;
 }
 .advfilterpanel {
 	position: relative;
