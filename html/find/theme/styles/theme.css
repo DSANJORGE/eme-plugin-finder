@@ -7,8 +7,8 @@
 	--text-link-color: #3cb371;
 	--dark-bg: #252525;
 	--light-bg: #fff;
-	--light-border: #a1a1a1;
-	--lighter-border: #e1e1e1;
+	--light-border: #e1e1e1;
+	--gray-border: #a1a1a1;
 	--light-hover: #efefef;
 	--secondary-bg: #fafafa;
 	--gray-border: #b1b1b1;
@@ -1322,7 +1322,7 @@ a.categorypathlink:hover,
 
 .sidebar-list li {
 	background: var(--light-bg);
-	border-bottom: 1px solid var(--lighter-border);
+	border-bottom: 1px solid var(--light-border);
 	line-height: 2;
 }
 
@@ -5975,8 +5975,8 @@ li.add {
 }
 
 .tabnav a.current {
-	background: var(--themed-tab-btn-active);
-	color: var(--default-text);
+	background: var(--themed-tab-btn-hover);
+	color: var(--themed-tab-btn-text);
 }
 
 .tab-actions {
