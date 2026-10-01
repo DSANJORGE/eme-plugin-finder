@@ -266,9 +266,22 @@ public class ThemeModule extends BaseMediaModule
 	{
 		String catalogid = inReq.findPathValue("catalogid");
 		Searcher themeSearcher = getSearcherManager().getSearcher(catalogid, "theme");
-		String themeid = inReq.getRequestParameter("themeid");
+		String applicationid = inReq.findValue("applicationid");
 		themeSearcher.resetMappings();
 		themeSearcher.reindexInternal();
+
+		//reset logos
+		Collection themes = getSearcherManager().query(catalogid, "theme").all().search();
+		for (Iterator iterator = themes.iterator(); iterator.hasNext();)
+		{
+			Data theme = (Data) iterator.next();
+			Page logopage = getPageManager().getPage("/finder/find/theme/" + theme.getId() + "/logo.png");
+			Page destpage = getPageManager().getPage("/" + applicationid + "/theme/" + theme.getId() + "/logo.png");
+			if (!destpage.getPath().equals(logopage.getPath()))
+			{
+				getPageManager().copyPage(logopage, destpage);
+			}
+		}
 		inReq.putPageValue("message", "Theme reset");
 		changeTheme(inReq);
 		// Data theme = (Data) themeSearcher.searchById(themeid);
