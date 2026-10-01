@@ -8,6 +8,7 @@
 	--dark-bg: #252525;
 	--light-bg: #fff;
 	--light-border: #a1a1a1;
+	--lighter-border: #e1e1e1;
 	--light-hover: #efefef;
 	--secondary-bg: #fafafa;
 	--gray-border: #b1b1b1;
@@ -1321,7 +1322,7 @@ a.categorypathlink:hover,
 
 .sidebar-list li {
 	background: var(--light-bg);
-	border-bottom: var(--1px-light);
+	border-bottom: 1px solid var(--lighter-border);
 	line-height: 2;
 }
 
