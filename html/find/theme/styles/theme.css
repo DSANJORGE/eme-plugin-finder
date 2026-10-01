@@ -5359,7 +5359,7 @@ table.greytxt {
 	padding: 0 1rem;
 }
 .emsubnav > ul > li.current a {
-	height: calc(var(--nav-btn-height) + 1px);
+	height: calc(var(--nav-btn-height));
 	line-height: var(--nav-btn-height);
 	background: var(--themed-tab-btn-active);
 }
