@@ -1740,7 +1740,7 @@ public class MediaArchive implements CatalogEnabled
 	 * @param sourcepath
 	 * @param inReq
 	 */
-	public void loadAssetPermissions(String sourcepath, WebPageRequest inReq)
+	public Asset loadAsset(String sourcepath, WebPageRequest inReq)
 	{
 		Asset asset = (Asset) inReq.getPageValue("asset");
 		if (asset == null)
@@ -1752,19 +1752,8 @@ public class MediaArchive implements CatalogEnabled
 		{
 			asset = findAsset(sourcepath);
 		}
-		if (asset == null)
-		{
-			return; // This doesn't work in collections!
-		}
+		return asset;
 
-		List<String> types = Arrays.asList(new String[] {"edit", "view", "forcewatermark"});
-
-		for (Iterator iterator = types.iterator(); iterator.hasNext();)
-		{
-			String type = (String) iterator.next();
-			Boolean cando = getAssetSecurityArchive().canDo(this, inReq.getUser(), inReq.getUserProfile(), type, asset);
-			inReq.putPageValue("can" + type + "asset", cando);
-		}
 	}
 
 	public Asset findAsset(String inSourcepath)
