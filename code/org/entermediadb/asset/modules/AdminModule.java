@@ -438,16 +438,47 @@ public class AdminModule extends BaseMediaModule
 		}
 	}
 
-	public void loadPermissionFinder(WebPageRequest inReq) throws Exception
+	public Permissions loadPermissionFinder(WebPageRequest inReq) 
 	{
 		UserProfile profile = inReq.getUserProfile();
 		if (profile != null)
 		{
 			Permissions permissions = profile.getPermissions();
 			inReq.putPageValue("permissions", permissions);
-
+			return profile.getPermissions();
 			// $permissions.can("viewsettings") $permissions.can("asset","upload")
 		}
+		return null;
+	}
+
+	public boolean canEntity(WebPageRequest inReq)
+	{
+		String permission = inReq.findValue("permission");
+		
+		String moduleid = inReq.findValue("module");
+		if (moduleid != null)
+		{
+			Data module = getMediaArchive(inReq).getCachedData("module", moduleid);
+			Data data = (Data)inReq.getPageValue("asset");
+			if (data == null)
+			{
+				data = (Data)inReq.getPageValue("entity");
+			}
+			if (data == null)
+			{
+				data = (Data)inReq.getPageValue("data");
+			}
+			if (data != null)
+			{
+				Permissions permissions = loadPermissionFinder(inReq);
+				boolean can = permissions.canEntity(module, data, permission);
+				return can;
+			}
+			
+
+
+		}
+		return false;
 	}
 
 	// We will see if we use this or not. Actions may want to handle it themself

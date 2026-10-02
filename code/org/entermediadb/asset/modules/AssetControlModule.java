@@ -7,12 +7,12 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.entermediadb.asset.Asset;
 import org.entermediadb.asset.MediaArchive;
 import org.openedit.Data;
+import org.openedit.users.Permissions;
 import org.openedit.WebPageRequest;
 import org.openedit.hittracker.HitTracker;
 import org.openedit.users.Group;
@@ -37,7 +37,7 @@ public class AssetControlModule extends BaseMediaModule
 	 * @throws Exception
 	 */
 
-	public void loadAssetPermissions(WebPageRequest inReq) throws Exception
+	public boolean loadDownloadPermission(WebPageRequest inReq)
 	{
 		// look in the assets xconf and check those permissions
 		MediaArchive archive = getMediaArchive(inReq);
@@ -45,13 +45,18 @@ public class AssetControlModule extends BaseMediaModule
 
 		if (sourcepath != null)
 		{
-			archive.loadAssetPermissions(sourcepath, inReq);
+			Asset asset = archive.loadAsset(sourcepath, inReq);
+			Permissions permissions = inReq.getUserProfile().getPermissions();
+			Data module = getMediaArchive(inReq).getCachedData("module", "asset");
+			boolean can = permissions.canEntity(module, asset, "download");
+			return can;
 		}
 		else
 		{
 			log.error("No sourcepath passed in " + inReq);
 		}
 		// loadAssetCollectionPermissions(inReq);
+		return false;
 	}
 
 	public Boolean canViewAsset(WebPageRequest inReq)
