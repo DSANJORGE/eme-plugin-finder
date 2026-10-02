@@ -121,14 +121,8 @@ public class AllowViewing
 							// inReq.putPageValue("oe-exception", "You do not have permission to view "+
 							// page.getPath() );
 
-							if (inReq.getContentPage().isHtml())
-							{
-								inReq.redirect(getLoginPath());	
-							}
-							else
-							{
-								inReq.getResponse().setStatus(HttpServletResponse.SC_FORBIDDEN);
-							}
+							inReq.redirect(getLoginPath());	
+							
 							
 						}
 					}
