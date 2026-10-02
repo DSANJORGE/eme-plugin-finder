@@ -326,17 +326,29 @@ public class AssetSecurityDataArchive implements AssetSecurityArchive
 			{
 				for (Category cat : exactcategories)
 				{
-
-					if (cat != null && cat.findValue("owner") != null && cat.findValue("owner").equals(inProfile.getId()))
+					if (cat == null)
+					{
+						continue;
+					}
+					String catowner = (String) cat.findValue("owner");
+					if (catowner != null && catowner.equals(inProfile.getId()))
 					{
 						return true;
 					}
-					if (cat != null && (cat.collectValues("viewuser") != null && cat.collectValues("viewuser").contains(inUser.getUserName())
-						|| cat.collectValues("viewrole") != null && cat.collectValues("viewrole").contains(inProfile.getSettingsRole().getId())))
+					if (inUser == null)
+					{
+						continue;
+					}
+					Collection viewusers = cat.collectValues("viewuser");
+					if (viewusers != null && viewusers.contains(inUser.getUserName()))
 					{
 						return true;
 
 					}
+
+					// Use AllowAll boolean instead of Anonymous role
+					//|| cat.collectValues("viewrole") != null && cat.collectValues("viewrole").contains(inProfile.getSettingsRole().getId())
+
 					Collection catgroups = cat.collectValues("viewgroup");
 					if (catgroups != null)
 					{

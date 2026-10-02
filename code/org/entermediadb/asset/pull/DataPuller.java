@@ -241,7 +241,7 @@ public class DataPuller extends BasePuller implements CatalogEnabled
 
 				if (totalcount > 0)
 				{
-					inLog.info(node.getName() + " imported " + totalcount);
+					inLog.info(node.getName() + " imported " + totalcount + " records");
 				}
 
 				// uploadChanges if not pulldataonly flag
