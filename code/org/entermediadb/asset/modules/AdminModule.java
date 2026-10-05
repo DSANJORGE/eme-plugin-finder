@@ -27,6 +27,7 @@ import org.entermediadb.asset.Category;
 import org.entermediadb.authenticate.AutoLoginProvider;
 import org.entermediadb.authenticate.AutoLoginResult;
 import org.entermediadb.authenticate.BaseAutoLogin;
+import org.entermediadb.google.GoogleManager;
 import org.entermediadb.users.AllowViewing;
 import org.entermediadb.users.PasswordHelper;
 import org.openedit.Data;
@@ -820,6 +821,22 @@ public class AdminModule extends BaseMediaModule
 			if (success)
 			{
 				mintTokens(inReq, user);
+				boolean firebaseenabled = Boolean.parseBoolean(inReq.getRequestParameter("firebaseenabled"));
+				if (firebaseenabled)
+				{
+					GoogleManager googleManager = (GoogleManager) getMediaArchive(inReq).getBean("googleManager");
+					googleManager.createFireBaseUser(user);
+
+					String firebasepassword = user.get("firebasepassword");
+					if (firebasepassword == null)
+					{
+						inReq.putPageValue("error", "Failed to set up Firebase");
+					}
+					else
+					{
+						inReq.putPageValue("firebasepassword", firebasepassword);
+					}
+				}
 			}
 		}
 		else if ("loginlink".equals(grantType))

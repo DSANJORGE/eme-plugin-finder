@@ -252,16 +252,14 @@ public class GoogleManager implements CatalogEnabled
 				{
 					results.addFolder(object);
 				}
-				else
-					if (mt.equals("application/vnd.google-apps.shortcut"))
-					{
-						results.addFolder(object);
-					}
-					else
-						if (!foldersOnly)
-						{
-							results.addFile(object);
-						}
+				else if (mt.equals("application/vnd.google-apps.shortcut"))
+				{
+					results.addFolder(object);
+				}
+				else if (!foldersOnly)
+				{
+					results.addFile(object);
+				}
 			}
 			Boolean keepgoing = (Boolean) json.get("incompleteSearch");
 			return keepgoing;
@@ -1122,15 +1120,8 @@ public class GoogleManager implements CatalogEnabled
 			String token = logIntoFirebase(apikey, inUser, firebasepassword);
 			if (token == null)
 			{
-				// maybe user is deleted?
 				createFirebaseUser(apikey, inUser);
 			}
-			// else if( !password.equals(firebasepassword ) )
-			// {
-			// updatePasswordOn(apikey,inUser,token,password);
-			// inUser.setValue("firebasepassword", password);
-			// getMediaArchive().getUserManager().saveUser(inUser);
-			// }
 		}
 	}
 
@@ -1195,7 +1186,7 @@ public class GoogleManager implements CatalogEnabled
 			log.error("Could not create user in firebase. Please manually delete existing user " + inUser.getEmail() + " " + returned);
 			return;
 		}
-		JSONObject json = getConnection().parseMap(createresp);
+		getConnection().parseMap(createresp);
 
 		inUser.setProperty("firebasepassword", firebasepassword);
 		getMediaArchive().getUserManager().saveUser(inUser);

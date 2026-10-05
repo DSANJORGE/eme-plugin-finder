@@ -33,6 +33,7 @@ import org.apache.commons.logging.LogFactory;
 import org.entermediadb.asset.Asset;
 import org.entermediadb.asset.MediaArchive;
 import org.entermediadb.projects.ProjectManager;
+import org.entermediadb.websocket.push.WebPushManager;
 import org.json.simple.JSONObject;
 import org.openedit.Data;
 import org.openedit.ModuleManager;
@@ -47,7 +48,6 @@ import org.openedit.users.User;
 import org.openedit.util.DateStorageUtil;
 import org.openedit.util.ExecutorManager;
 import org.openedit.util.JSONParser;
-import org.entermediadb.websocket.push.WebPushManager;
 
 public class ChatServer
 {
@@ -396,8 +396,8 @@ public class ChatServer
 
 			// Push browser notifications to subscribed users who are not currently connected
 			final Set pushUserids = userids;
-			pushUserids.remove(usermessageid); //remove the message author from push notifications
-			pushUserids.remove("agent"); //remove the agent
+			pushUserids.remove(usermessageid); // remove the message author from push notifications
+			pushUserids.remove("agent"); // remove the agent
 			final Data pushEntity = entity;
 			getExecutorManager(catalogid).execute(new Runnable() {
 				@Override
@@ -412,13 +412,13 @@ public class ChatServer
 					Object messageText = inMap.get("message");
 					if (!inMap.get("messagetype").equals("message"))
 					{
-						return; //Only push real messages
+						return; // Only push real messages
 					}
 					if (messageText == null)
 					{
 						messageText = inMap.get("messageplain");
 					}
-					if (messageText == null) 
+					if (messageText == null)
 					{
 						return; // No message to push
 					}
@@ -464,7 +464,7 @@ public class ChatServer
 						if (connectedUsers.contains(pushUserId))
 						{
 							// Already delivered over the live WebSocket connection
-							//continue;
+							// continue;
 						}
 						try
 						{
@@ -475,6 +475,13 @@ public class ChatServer
 							log.error("Web push failed for user " + pushUserId, e);
 						}
 					}
+
+					// GoogleManager manager = (GoogleManager) getModuleManager().getBean("googleManager");
+					// String accesstoken = manager.getAccessToken();
+					// FireBase base = new FireBase();
+					// base.notifyTopic("eme-profile-app", accesstoken, inChannel, inUser, inSubject, inMessage,
+					// inExtraData);
+
 				}
 			});
 		}
