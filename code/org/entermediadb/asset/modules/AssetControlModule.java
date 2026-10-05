@@ -42,10 +42,14 @@ public class AssetControlModule extends BaseMediaModule
 		// look in the assets xconf and check those permissions
 		MediaArchive archive = getMediaArchive(inReq);
 		String sourcepath = archive.getSourcePathForPage(inReq);
-		log.info("Checking download permissions. " + sourcepath);
 		if (sourcepath != null)
 		{
-			Asset asset = archive.loadAsset(sourcepath, inReq);
+			Asset asset = archive.getAssetBySourcePath(sourcepath);
+			if (asset == null)
+			{
+				log.error("Asset not found for sourcepath: " + sourcepath);
+				return false;
+			}
 			Permissions permissions = inReq.getUserProfile().getPermissions();
 			Data module = getMediaArchive(inReq).getCachedData("module", "asset");
 			log.info("Module: " + module + " Asset: " + asset + " Sourcepath: " + sourcepath);
