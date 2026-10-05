@@ -351,7 +351,12 @@ public class OriginalPuller extends BasePuller implements CatalogEnabled
 					}
 
 					// JSONArray results = (JSONArray)remotechanges.get("results"); //records?
-
+					jsonarray = (JSONArray) remotechanges.get("results");
+					if (jsonarray.isEmpty())
+					{
+						continue;
+					}
+					log.info("Found "  + jsonarray.size() + " original items on page " + page);
 					counted = counted + downloadOriginalFiles(inArchive, inLog, connection, node, params, removecatalogid, jsonarray);
 				}
 			}
@@ -425,7 +430,7 @@ public class OriginalPuller extends BasePuller implements CatalogEnabled
 							tosave.getParentFile().delete();
 						}
 
-						log.info("Saving: " + found.getAbsolutePath());
+						log.info("Original file downloaded. Saving: " + found.getAbsolutePath());
 
 						InputStream stream = genfile.getEntity().getContent();
 						// Change the timestamp to match
