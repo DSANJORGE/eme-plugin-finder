@@ -212,8 +212,9 @@ public class SyncModule extends BaseMediaModule
 		MediaArchive archive = getMediaArchive(inReq);
 		PullManager pullManager = getPullManager(archive.getCatalogId());
 		ScriptLogger logger = (ScriptLogger) inReq.getPageValue("log");
-
 		pullManager.getDataPuller().pull(archive, logger);
+
+		//Pull Originals
 		archive.fireGeneralEvent(inReq.getUser(), "cluster", "pulloriginals", null);
 
 	}
@@ -228,6 +229,8 @@ public class SyncModule extends BaseMediaModule
 		pullManager.getOriginalPuller().pull(archive, logger);
 
 	}
+
+	// List all changes, asked by remote
 
 	public void loadAllDataChanges(WebPageRequest inReq) throws Exception
 	{
