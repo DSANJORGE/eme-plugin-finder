@@ -625,7 +625,7 @@ public class OriginalPuller extends BasePuller implements CatalogEnabled
 		detail.put("path", item.getPath());
 		detail.put("filename", item.getName());
 		String starts = "/WEB-INF/data/" + inArchive.getCatalogId() + "/originals";
-		originalspath = originalspath.substring(starts.length());
+		originalspath = originalspath.substring(starts.length() + 1);
 		detail.put("originalspath", originalspath);
 		detail.put("filesize", String.valueOf(item.getLength()));
 		detail.put("filedate", item.getLastModified());
