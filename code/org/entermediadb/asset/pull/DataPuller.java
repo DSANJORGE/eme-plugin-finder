@@ -185,7 +185,7 @@ public class DataPuller extends BasePuller implements CatalogEnabled
 		Collection nodes = getNodeManager().getRemoteEditClusters(inArchive.getCatalogId());
 		MultiValued node = null;
 
-		inLog.info("Scanning " + nodes.size() + " nodes ");
+		//inLog.info("Scanning " + nodes.size() + " nodes ");
 		for (Iterator iterator = nodes.iterator(); iterator.hasNext();)
 		{
 			try
@@ -241,7 +241,7 @@ public class DataPuller extends BasePuller implements CatalogEnabled
 
 				if (totalcount > 0)
 				{
-					inLog.info(node.getName() + " imported " + totalcount);
+					inLog.info(node.getName() + " imported " + totalcount + " records");
 				}
 
 				// uploadChanges if not pulldataonly flag
@@ -367,6 +367,7 @@ public class DataPuller extends BasePuller implements CatalogEnabled
 				JSONArray results = (JSONArray) remotechanges.get("results"); // records?
 
 				saved = importDataChanges(inArchive, results);
+				
 				// pull in generated
 				downloadGeneratedFiles(inArchive, connection, node, params, remotechanges, skipgenerated);
 

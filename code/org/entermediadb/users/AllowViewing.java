@@ -120,7 +120,10 @@ public class AllowViewing
 						{
 							// inReq.putPageValue("oe-exception", "You do not have permission to view "+
 							// page.getPath() );
-							inReq.redirect(getLoginPath());
+
+							inReq.redirect(getLoginPath());	
+							
+							
 						}
 					}
 				}

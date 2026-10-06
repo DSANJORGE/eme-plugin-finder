@@ -1238,8 +1238,9 @@ public class MediaAdminModule extends BaseMediaModule
 				Data module = (Data) iterator.next();
 				getWorkspaceManager().saveModule(archive.getCatalogId(), appid, module); // Save views
 			}
-			checkParents(archive, parentschilds);
 			archive.saveData("module", tosave); // Save children and parents
+			checkParents(archive, parentschilds);
+			archive.saveData("module", tosave); // Save updated children and parents
 
 			archive.getSearcher("appsection").deleteAll(inReq.getUser()); //
 			archive.getSearcher("appsection").saveAllData(tosavemenu, inReq.getUser());
@@ -1260,8 +1261,8 @@ public class MediaAdminModule extends BaseMediaModule
 			Data parentmodule = archive.getData("module", pair.getParentModuleId());
 			if (parentmodule == null)
 			{
-				log.error("missing parent module");
-				continue;
+				//log.error("missing parent module");
+				throw new OpenEditException("missing parent module" + pair);
 			}
 			if (details.getDetail(pair.getParentModuleId()) == null)
 			{

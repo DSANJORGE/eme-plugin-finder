@@ -185,13 +185,13 @@ li.dropdown {
 }
 .emsubnav ul.resultsnav li a.dropdown-item {
 	padding: 0.25em 0.5em 0.25em 0.75em;
-	color: var(--themed-nav-btn-text);
-	background: var(--themed-nav-btn);
+	color: var(--themed-tab-btn-text);
+	background: var(--themed-tab-btn-hover);
 	line-height: 30px;
 }
 .emsubnav .resultsnav .dropdown-menu .dropdown-item:hover {
 	color: var(--themed-nav-btn-text);
-	background: var(--themed-nav-btn-hover);
+	background: var(--themed-nav-btn);
 }
 .lighttheme .emsubnav ul.resultsnav li a.dropdown-item {
 	background: var(--light-hover);

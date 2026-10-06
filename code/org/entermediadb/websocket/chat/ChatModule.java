@@ -31,6 +31,7 @@ import org.entermediadb.ai.llm.BaseAgentContext;
 import org.entermediadb.asset.Asset;
 import org.entermediadb.asset.MediaArchive;
 import org.entermediadb.asset.modules.BaseMediaModule;
+import org.entermediadb.websocket.push.WebPushManager;
 import org.openedit.Data;
 import org.openedit.MultiValued;
 import org.openedit.WebPageRequest;
@@ -236,6 +237,11 @@ public class ChatModule extends BaseMediaModule
 
 		Searcher chats = results.getSearcher();
 		Collection page = results.getPageOfHits();
+		if (page == null || page.isEmpty())
+		{
+			return;
+		}
+
 		ArrayList loaded = new ArrayList();
 		String lastdateloaded = null;
 		List messageids = new ArrayList(results.size());
@@ -683,7 +689,7 @@ public class ChatModule extends BaseMediaModule
 		{
 			channelname = user.getScreenName();;
 		}
-		else if( entity != null )
+		else if (entity != null)
 		{
 			channelname = entity.getName();
 		}
@@ -854,6 +860,78 @@ public class ChatModule extends BaseMediaModule
 		inReq.putPageValue("chat", chat);
 		inReq.putPageValue("data", chat);
 
+	}
+
+	/**
+	 * Returns the server's current VAPID public key so the browser always subscribes with the
+	 * key matching the private key WebPushManager actually signs with, instead of relying on a
+	 * copy hardcoded in JS that can drift if the server key is ever regenerated.
+	 */
+	public void loadPushPublicKey(WebPageRequest inReq) throws Exception
+	{
+		WebPushManager manager = (WebPushManager) getModuleManager().getBean("system", "webPushManager");
+		inReq.putPageValue("pushpublickey", manager.getVapidPublicKeyBase64Url());
+	}
+
+	/**
+	 * Saves (or updates) the calling user's browser push subscription in the "userendpoint"
+	 * table. One record per user, keyed by user id, so a re-subscription overwrites the old
+	 * endpoint instead of creating a duplicate. The user id comes from the session, never
+	 * from the request parameters.
+	 */
+	public void savePushSubscription(WebPageRequest inReq)
+	{
+		String userid = inReq.getUserName();
+		if (userid == null || userid.trim().isEmpty())
+		{
+			log.warn("savePushSubscription called without a logged in user");
+			inReq.putPageValue("error", "not logged in");
+			return;
+		}
+		String endpoint = inReq.getRequestParameter("endpoint");
+		String p256dh = inReq.getRequestParameter("p256dh");
+		if (endpoint == null || endpoint.trim().isEmpty() || p256dh == null || p256dh.trim().isEmpty())
+		{
+			inReq.putPageValue("error", "missing endpoint or p256dh");
+			return;
+		}
+		MediaArchive archive = getMediaArchive(inReq);
+		Data endpointdata = (Data) archive.getSearcher("usernotificationendpoint").createNewData();
+		endpointdata.setId(userid);
+		endpointdata.setValue("user", userid);
+		endpointdata.setValue("endpoint", endpoint);
+		endpointdata.setValue("p256dh", p256dh);
+		String auth = inReq.getRequestParameter("auth");
+		if (auth != null && !auth.trim().isEmpty())
+		{
+			endpointdata.setValue("auth", auth);
+		}
+		endpointdata.setValue("dateupdated", new Date());
+		archive.saveData("usernotificationendpoint", endpointdata);
+		log.info("Saved push subscription for user " + userid);
+		inReq.putPageValue("data", endpointdata);
+	}
+
+	/**
+	 * Removes the calling user's browser push subscription from the "userendpoint" table,
+	 * e.g. when the user unsubscribes in the browser.
+	 */
+	public void deletePushSubscription(WebPageRequest inReq)
+	{
+		String userid = inReq.getUserName();
+		if (userid == null || userid.trim().isEmpty())
+		{
+			inReq.putPageValue("error", "not logged in");
+			return;
+		}
+		MediaArchive archive = getMediaArchive(inReq);
+		Data endpointdata = archive.getData("userendpoint", userid);
+		if (endpointdata != null)
+		{
+			archive.getSearcher("userendpoint").delete(endpointdata, inReq.getUser());
+			log.info("Deleted push subscription for user " + userid);
+		}
+		inReq.putPageValue("deleted", endpointdata != null);
 	}
 
 }

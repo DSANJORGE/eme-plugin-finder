@@ -27,6 +27,7 @@ import org.entermediadb.asset.Category;
 import org.entermediadb.authenticate.AutoLoginProvider;
 import org.entermediadb.authenticate.AutoLoginResult;
 import org.entermediadb.authenticate.BaseAutoLogin;
+import org.entermediadb.google.GoogleManager;
 import org.entermediadb.users.AllowViewing;
 import org.entermediadb.users.PasswordHelper;
 import org.openedit.Data;
@@ -439,16 +440,47 @@ public class AdminModule extends BaseMediaModule
 		}
 	}
 
-	public void loadPermissionFinder(WebPageRequest inReq) throws Exception
+	public Permissions loadPermissionFinder(WebPageRequest inReq) 
 	{
 		UserProfile profile = inReq.getUserProfile();
 		if (profile != null)
 		{
 			Permissions permissions = profile.getPermissions();
 			inReq.putPageValue("permissions", permissions);
-
+			return profile.getPermissions();
 			// $permissions.can("viewsettings") $permissions.can("asset","upload")
 		}
+		return null;
+	}
+
+	public boolean canEntity(WebPageRequest inReq)
+	{
+		String permission = inReq.findValue("permission");
+		
+		String moduleid = inReq.findValue("module");
+		if (moduleid != null)
+		{
+			Data module = getMediaArchive(inReq).getCachedData("module", moduleid);
+			Data data = (Data)inReq.getPageValue("asset");
+			if (data == null)
+			{
+				data = (Data)inReq.getPageValue("entity");
+			}
+			if (data == null)
+			{
+				data = (Data)inReq.getPageValue("data");
+			}
+			if (data != null)
+			{
+				Permissions permissions = loadPermissionFinder(inReq);
+				boolean can = permissions.canEntity(module, data, permission);
+				return can;
+			}
+			
+
+
+		}
+		return false;
 	}
 
 	// We will see if we use this or not. Actions may want to handle it themself
@@ -789,6 +821,22 @@ public class AdminModule extends BaseMediaModule
 			if (success)
 			{
 				mintTokens(inReq, user);
+				boolean firebaseenabled = Boolean.parseBoolean(inReq.getRequestParameter("firebaseenabled"));
+				if (firebaseenabled)
+				{
+					GoogleManager googleManager = (GoogleManager) getMediaArchive(inReq).getBean("googleManager");
+					googleManager.createFireBaseUser(user);
+
+					String firebasepassword = user.get("firebasepassword");
+					if (firebasepassword == null)
+					{
+						inReq.putPageValue("error", "Failed to set up Firebase");
+					}
+					else
+					{
+						inReq.putPageValue("firebasepassword", firebasepassword);
+					}
+				}
 			}
 		}
 		else if ("loginlink".equals(grantType))

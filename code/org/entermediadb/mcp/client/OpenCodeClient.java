@@ -1012,6 +1012,14 @@ public class OpenCodeClient implements CatalogEnabled
         return sessionMap.get(agentJobStepId);
     }
 
+    /**
+     * Forgets the session for a step so the next run starts a new opencode session
+     */
+    public void clearStatus(String agentJobStepId)
+    {
+        sessionMap.remove(agentJobStepId);
+    }
+
     protected static long longOf(Object inValue)
     {
         return inValue instanceof Number ? ((Number) inValue).longValue() : 0L;
