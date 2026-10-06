@@ -235,15 +235,26 @@ public class AdaptiveTutorialUserCommentSkill extends AdaptiveTutorialBaseSkill
 			tutorMessageContext.putContextValue("learnerprompt", prompt);
 			// Mission agent (testu): server-validated actions the tutor may attach. Absent bean = behaviour as before. The
 			// filter/format logic lives in testu (MissionPlanner, reflected via TestULearningModule) so it's covered by a
-			// deterministic check; this skill is reflect-call-and-append only (fix round 1, item 2).
+			// deterministic check; this skill is reflect-call-and-append only (fix round 1, item 2). offer() is called
+			// once per message (fix round 2, item 2/N1): offeredActionsList is kept across the LLM call below and handed
+			// back into appendActions() as-is, so a picked id always binds to the action it was actually shown, never a
+			// fresh (possibly different) actionsFor() snapshot taken after the model replied.
 			Object testuLearning = null;
 			try { testuLearning = getMediaArchive().getModuleManager().getBean("TestULearningModule"); } catch (Exception e) { testuLearning = null; }
 			String offeredactions = null;
+			java.util.List<?> offeredActionsList = java.util.List.of();
 			if (testuLearning != null && userId != null)
 			{
 				try
 				{
-					offeredactions = (String) testuLearning.getClass().getMethod("offerText", org.entermediadb.asset.MediaArchive.class, String.class, String.class).invoke(testuLearning, getMediaArchive(), userId, mode);
+					Object offerResult = testuLearning.getClass().getMethod("offer", org.entermediadb.asset.MediaArchive.class, String.class, String.class).invoke(testuLearning, getMediaArchive(), userId, mode);
+					java.util.Map<?, ?> offerMap = (java.util.Map<?, ?>) offerResult;
+					offeredactions = (String) offerMap.get("text");
+					Object actions = offerMap.get("actions");
+					if (actions instanceof java.util.List)
+					{
+						offeredActionsList = (java.util.List<?>) actions;
+					}
 				}
 				catch (Exception e)
 				{
@@ -309,8 +320,10 @@ public class AdaptiveTutorialUserCommentSkill extends AdaptiveTutorialBaseSkill
 			}
 			// Mission agent (testu): the LLM's own [[do ...]] (prose injection -- fix round 1, item 1: it must never survive
 			// as a live button) is stripped and at most 2 server-offered lines are appended, in server order, never on a
-			// voice closing. Absent bean = message merely untouched, as before. Reflect-call-and-append only (item 2); the
-			// filter/format/strip logic lives in testu (MissionPlanner), where a deterministic check covers it.
+			// voice closing. offeredActionsList is the SAME snapshot offer() returned above (fix round 2, item 2/N1), not a
+			// fresh actionsFor() call. Absent bean or no userId = message stays unstripped, as before (ruling: no bean
+			// means there's no TestU app). Reflect-call-and-append only (item 2); the filter/format/strip logic lives in
+			// testu (MissionPlanner), where a deterministic check covers it.
 			String citeMessage = message; // quoteForCitation reads the message as it stood before the [[do append (item 5)
 			if (testuLearning != null && userId != null)
 			{
@@ -319,8 +332,8 @@ public class AdaptiveTutorialUserCommentSkill extends AdaptiveTutorialBaseSkill
 				try
 				{
 					message = (String) testuLearning.getClass()
-						.getMethod("appendActions", org.entermediadb.asset.MediaArchive.class, String.class, String.class, java.util.List.class, String.class)
-						.invoke(testuLearning, getMediaArchive(), userId, message, pickedList, mode);
+						.getMethod("appendActions", String.class, java.util.List.class, java.util.List.class)
+						.invoke(testuLearning, message, pickedList, offeredActionsList);
 				}
 				catch (Exception e)
 				{
