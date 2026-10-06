@@ -233,6 +233,33 @@ public class AdaptiveTutorialUserCommentSkill extends AdaptiveTutorialBaseSkill
 			}
 			tutorMessageContext.putContextValue("chathistory", chatHistory);
 			tutorMessageContext.putContextValue("learnerprompt", prompt);
+			// Mission agent (testu): server-validated actions the tutor may attach. Absent bean = behaviour as before.
+			java.util.List<?> offered = null;
+			Object provider = null;
+			try { provider = getMediaArchive().getModuleManager().getBean("TestULearningModule"); } catch (Exception e) { provider = null; }
+			if (provider != null && userId != null)
+			{
+				try
+				{
+					offered = (java.util.List<?>) provider.getClass().getMethod("actionsFor", org.entermediadb.asset.MediaArchive.class, String.class).invoke(provider, getMediaArchive(), userId);
+				}
+				catch (Exception e)
+				{
+					log.warn("mission actions unavailable", e);
+				}
+			}
+			StringBuilder offerlist = new StringBuilder();
+			java.util.Map<String, java.util.Map<?, ?>> byId = new java.util.HashMap<>();
+			if (offered != null)
+			{
+				for (Object o : offered)
+				{
+					java.util.Map<?, ?> a = (java.util.Map<?, ?>) o;
+					byId.put(String.valueOf(a.get("id")), a);
+					offerlist.append(a.get("id")).append(": ").append(a.get("type")).append(" · ").append(a.get("topic")).append("\n");
+				}
+			}
+			tutorMessageContext.putContextValue("offeredactions", offerlist.length() == 0 ? null : offerlist.toString());
 			LlmConnection thinking = getMediaArchive().getLlmConnection("thinking");
 			started = System.currentTimeMillis();
 			LlmResponse response = thinking.callStructure(tutorMessageContext, "chat_tutor_usercomment");
@@ -288,6 +315,21 @@ public class AdaptiveTutorialUserCommentSkill extends AdaptiveTutorialBaseSkill
 			{
 				// The app renders the ">> ..." lines as follow-up chips; llamat sometimes omits them. A closing has none.
 				message = message + "\n\n>> " + ("evaluation".equals(mode) ? "¿Quieres que te explique cómo funciona esta pregunta?" : question != null ? "¿Quieres que te explique la pregunta en juego?" : org ? "¿Quieres que te explique algún punto de estos temas?" : "¿Quieres que te explique algún punto de esta lección?");
+			}
+			// Mission agent (testu): at most 2 server-offered [[do ...]] lines, chosen by the LLM but never an id the server
+			// did not offer; appended after the >> follow-ups, never on a voice closing.
+			Object picked = structured.get("actions");
+			if (!end && picked instanceof java.util.List && !byId.isEmpty())
+			{
+				int n = 0;
+				for (Object id : (java.util.List<?>) picked)
+				{
+					java.util.Map<?, ?> a = byId.get(String.valueOf(id));
+					if (a == null || n == 2)
+						continue; // never an action the server did not offer
+					message = message + "\n[[do " + a.get("type") + " topic=" + a.get("topic") + (a.get("mode") == null ? "" : " mode=" + a.get("mode")) + (a.get("section") == null ? "" : " section=" + a.get("section")) + "]]";
+					n++;
+				}
 			}
 			// The RAG path gets the passage and its boxes from the embedding server's
 			// sources; here the tutor wrote the citation itself, so look the page up.
