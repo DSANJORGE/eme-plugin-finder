@@ -233,33 +233,24 @@ public class AdaptiveTutorialUserCommentSkill extends AdaptiveTutorialBaseSkill
 			}
 			tutorMessageContext.putContextValue("chathistory", chatHistory);
 			tutorMessageContext.putContextValue("learnerprompt", prompt);
-			// Mission agent (testu): server-validated actions the tutor may attach. Absent bean = behaviour as before.
-			java.util.List<?> offered = null;
-			Object provider = null;
-			try { provider = getMediaArchive().getModuleManager().getBean("TestULearningModule"); } catch (Exception e) { provider = null; }
-			if (provider != null && userId != null)
+			// Mission agent (testu): server-validated actions the tutor may attach. Absent bean = behaviour as before. The
+			// filter/format logic lives in testu (MissionPlanner, reflected via TestULearningModule) so it's covered by a
+			// deterministic check; this skill is reflect-call-and-append only (fix round 1, item 2).
+			Object testuLearning = null;
+			try { testuLearning = getMediaArchive().getModuleManager().getBean("TestULearningModule"); } catch (Exception e) { testuLearning = null; }
+			String offeredactions = null;
+			if (testuLearning != null && userId != null)
 			{
 				try
 				{
-					offered = (java.util.List<?>) provider.getClass().getMethod("actionsFor", org.entermediadb.asset.MediaArchive.class, String.class).invoke(provider, getMediaArchive(), userId);
+					offeredactions = (String) testuLearning.getClass().getMethod("offerText", org.entermediadb.asset.MediaArchive.class, String.class, String.class).invoke(testuLearning, getMediaArchive(), userId, mode);
 				}
 				catch (Exception e)
 				{
 					log.warn("mission actions unavailable", e);
 				}
 			}
-			StringBuilder offerlist = new StringBuilder();
-			java.util.Map<String, java.util.Map<?, ?>> byId = new java.util.HashMap<>();
-			if (offered != null)
-			{
-				for (Object o : offered)
-				{
-					java.util.Map<?, ?> a = (java.util.Map<?, ?>) o;
-					byId.put(String.valueOf(a.get("id")), a);
-					offerlist.append(a.get("id")).append(": ").append(a.get("type")).append(" · ").append(a.get("topic")).append("\n");
-				}
-			}
-			tutorMessageContext.putContextValue("offeredactions", offerlist.length() == 0 ? null : offerlist.toString());
+			tutorMessageContext.putContextValue("offeredactions", offeredactions);
 			LlmConnection thinking = getMediaArchive().getLlmConnection("thinking");
 			started = System.currentTimeMillis();
 			LlmResponse response = thinking.callStructure(tutorMessageContext, "chat_tutor_usercomment");
@@ -316,24 +307,29 @@ public class AdaptiveTutorialUserCommentSkill extends AdaptiveTutorialBaseSkill
 				// The app renders the ">> ..." lines as follow-up chips; llamat sometimes omits them. A closing has none.
 				message = message + "\n\n>> " + ("evaluation".equals(mode) ? "¿Quieres que te explique cómo funciona esta pregunta?" : question != null ? "¿Quieres que te explique la pregunta en juego?" : org ? "¿Quieres que te explique algún punto de estos temas?" : "¿Quieres que te explique algún punto de esta lección?");
 			}
-			// Mission agent (testu): at most 2 server-offered [[do ...]] lines, chosen by the LLM but never an id the server
-			// did not offer; appended after the >> follow-ups, never on a voice closing.
-			Object picked = structured.get("actions");
-			if (!end && picked instanceof java.util.List && !byId.isEmpty())
+			// Mission agent (testu): the LLM's own [[do ...]] (prose injection -- fix round 1, item 1: it must never survive
+			// as a live button) is stripped and at most 2 server-offered lines are appended, in server order, never on a
+			// voice closing. Absent bean = message merely untouched, as before. Reflect-call-and-append only (item 2); the
+			// filter/format/strip logic lives in testu (MissionPlanner), where a deterministic check covers it.
+			String citeMessage = message; // quoteForCitation reads the message as it stood before the [[do append (item 5)
+			if (testuLearning != null && userId != null)
 			{
-				int n = 0;
-				for (Object id : (java.util.List<?>) picked)
+				Object picked = end ? java.util.List.of() : structured.get("actions");
+				java.util.List<?> pickedList = picked instanceof java.util.List ? (java.util.List<?>) picked : java.util.List.of();
+				try
 				{
-					java.util.Map<?, ?> a = byId.get(String.valueOf(id));
-					if (a == null || n == 2)
-						continue; // never an action the server did not offer
-					message = message + "\n[[do " + a.get("type") + " topic=" + a.get("topic") + (a.get("mode") == null ? "" : " mode=" + a.get("mode")) + (a.get("section") == null ? "" : " section=" + a.get("section")) + "]]";
-					n++;
+					message = (String) testuLearning.getClass()
+						.getMethod("appendActions", org.entermediadb.asset.MediaArchive.class, String.class, String.class, java.util.List.class, String.class)
+						.invoke(testuLearning, getMediaArchive(), userId, message, pickedList, mode);
+				}
+				catch (Exception e)
+				{
+					log.warn("mission actions unavailable", e);
 				}
 			}
 			// The RAG path gets the passage and its boxes from the embedding server's
 			// sources; here the tutor wrote the citation itself, so look the page up.
-			answer = message + (org ? quoteForCitation(orgdocs, message, usermessage, sent) : quoteForCitation(tutorialid, message, usermessage, sent));
+			answer = message + (org ? quoteForCitation(orgdocs, citeMessage, usermessage, sent) : quoteForCitation(tutorialid, citeMessage, usermessage, sent));
 		}
 
 		LlmResponse llmResponse = new BasicLlmResponse();
@@ -668,8 +664,10 @@ public class AdaptiveTutorialUserCommentSkill extends AdaptiveTutorialBaseSkill
 	/** Any citation, page or video: group 1 the title, group 2 the page (null for `m:ss`). Leading blanks included, like BADCITE. */
 	private static final java.util.regex.Pattern ANYCITE = java.util.regex.Pattern.compile("[ \\t]*\\[([^\\[\\]\\n]+?),\\s*(?:p\\.?\\s*(\\d+)|\\d+:\\d\\d)\\]");
 
-	/** In a past reply: a `> quote` or `[[hl …]]` line (not a `>>` follow-up), or any citation. */
-	private static final java.util.regex.Pattern STALECITE = java.util.regex.Pattern.compile("(?m)^(?:> |\\[\\[hl ).*$\\n?|[ \\t]*\\[[^\\[\\]\\n]+?,\\s*(?:p\\.?\\s*\\d+|\\d+:\\d\\d)\\]");
+	/** In a past reply: a `> quote`, `[[hl …]]` or `[[do …]]` line (not a `>>` follow-up), or any citation. The `[[do` lines
+	 *  are the server's own, not sent again this turn: stripped so the model never learns to copy one from its own history
+	 *  (fix round 1, item 1). */
+	private static final java.util.regex.Pattern STALECITE = java.util.regex.Pattern.compile("(?m)^(?:> |\\[\\[hl |\\[\\[do ).*$\\n?|[ \\t]*\\[[^\\[\\]\\n]+?,\\s*(?:p\\.?\\s*\\d+|\\d+:\\d\\d)\\]");
 
 	/** A single bracket group that is not a `[Title, p. N]` / `[Title, m:ss]` citation (never a `[[hl` box). */
 	private static final java.util.regex.Pattern BADCITE = java.util.regex.Pattern.compile("[ \\t]*(?<!\\[)\\[(?!\\[)(?![^\\]\\n]+,\\s*(p\\.\\s*\\d+|\\d+:\\d\\d)\\])[^\\[\\]\\n]*\\](?!\\])");
